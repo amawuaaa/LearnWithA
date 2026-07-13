@@ -1,4 +1,4 @@
-# Portal de Clase
+# LearnWithA
 
 Aplicación educativa con acceso para profesora y estudiantes. Incluye anuncios
 en tiempo real, mini-tests, seguimiento de resultados, vocabulario y juegos.
@@ -32,6 +32,7 @@ cp .env.local.example .env.local
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-clave-anonima
+GEMINI_API_KEY=tu-clave-de-google-ai-studio
 ```
 
 6. Instala y arranca la aplicación:
@@ -42,6 +43,27 @@ pnpm dev
 ```
 
 La aplicación estará disponible en `http://localhost:3000`.
+
+## Recuperación de contraseña
+
+En Supabase, abre Authentication > URL Configuration y añade esta URL a
+Redirect URLs:
+
+```text
+http://localhost:3000/auth/callback
+```
+
+En Authentication > Email Templates > Reset Password, usa un enlace con el
+token seguro de Supabase:
+
+```html
+<a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/actualizar-password">
+  Cambiar mi contraseña
+</a>
+```
+
+Al desplegar la aplicación, añade también la URL equivalente del dominio de
+producción.
 
 ## Comprobaciones
 

@@ -3,21 +3,69 @@
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Avatar from "./Avatar";
+import {
+  IconAnuncios,
+  IconCalendario,
+  IconInicio,
+  IconMemoria,
+  IconMensajes,
+  IconTests,
+  IconVocabulario,
+} from "./icons";
 
 const enlaces = [
-  { href: "/", etiqueta: "Noticias", icono: "N" },
-  { href: "/tests", etiqueta: "Tests", icono: "T" },
-  { href: "/juegos", etiqueta: "Juegos", icono: "J" },
-  { href: "/memoria", etiqueta: "Memoria", icono: "M" },
-  { href: "/vocabulario", etiqueta: "Vocabulario", icono: "V" },
+  { href: "/", etiqueta: "Inicio", Icono: IconInicio },
+  { href: "/calendario", etiqueta: "Calendario", Icono: IconCalendario },
+  { href: "/anuncios", etiqueta: "Anuncios", Icono: IconAnuncios },
+  { href: "/mensajes", etiqueta: "Mensajes", Icono: IconMensajes },
+  { href: "/tests", etiqueta: "Tests", Icono: IconTests },
+  { href: "/memoria", etiqueta: "Memoria", Icono: IconMemoria },
+  { href: "/vocabulario", etiqueta: "Vocabulario", Icono: IconVocabulario },
 ];
 
-export default function Sidebar({ perfil }) {
+export default function Sidebar({ perfil, mensajesNoLeidos = 0 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
+  const [noLeidos, setNoLeidos] = useState(mensajesNoLeidos);
+
+  useEffect(() => {
+    setNoLeidos(mensajesNoLeidos);
+  }, [mensajesNoLeidos]);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function actualizarNoLeidos() {
+      let consulta = supabase
+        .from("mensajes")
+        .select("id", { count: "exact", head: true })
+        .is("leido_en", null)
+        .neq("remitente_id", perfil.id);
+
+      if (perfil.rol !== "admin") {
+        consulta = consulta.eq("estudiante_id", perfil.id);
+      }
+
+      const { count } = await consulta;
+      if (count !== null) setNoLeidos(count);
+    }
+
+    const canal = supabase
+      .channel(`sidebar-mensajes-${perfil.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "mensajes" },
+        actualizarNoLeidos,
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [perfil.id, perfil.rol]);
 
   async function cerrarSesion() {
     const supabase = createClient();
@@ -29,10 +77,9 @@ export default function Sidebar({ perfil }) {
   const contenido = (
     <>
       <div className="border-b border-slate-200 px-5 py-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-          Portal
+        <p className="text-xl font-semibold tracking-tight text-slate-900">
+          Learn<span className="text-accent">WithA</span>
         </p>
-        <p className="mt-1 text-xl font-semibold text-slate-900">Mi clase</p>
       </div>
 
       <nav className="flex-1 space-y-1 p-3" aria-label="Navegación principal">
@@ -49,18 +96,23 @@ export default function Sidebar({ perfil }) {
               onClick={() => setAbierto(false)}
               className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                 activo
-                  ? "bg-indigo-50 text-accent"
+                  ? "bg-accent-muted text-accent"
                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               }`}
             >
               <span
-                className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold ${
-                  activo ? "bg-indigo-100" : "bg-slate-100"
+                className={`flex h-7 w-7 items-center justify-center rounded-md ${
+                  activo ? "bg-accent-soft" : "bg-slate-100"
                 }`}
               >
-                {enlace.icono}
+                <enlace.Icono className="h-4 w-4" />
               </span>
-              {enlace.etiqueta}
+              <span className="flex-1">{enlace.etiqueta}</span>
+              {enlace.href === "/mensajes" && noLeidos > 0 && (
+                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
+                  {noLeidos > 99 ? "99+" : noLeidos}
+                </span>
+              )}
             </Link>
           );
         })}
@@ -96,7 +148,9 @@ export default function Sidebar({ perfil }) {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 md:hidden">
-        <p className="font-semibold text-slate-900">Portal de Clase</p>
+        <p className="font-semibold text-slate-900">
+          Learn<span className="text-accent">WithA</span>
+        </p>
         <button
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium"
           type="button"

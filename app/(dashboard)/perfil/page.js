@@ -9,7 +9,7 @@ export default async function PerfilPage() {
 
   const { data: perfil } = await supabase
     .from("usuarios")
-    .select("nombre, avatar_url, rol, creado_en")
+    .select("nombre, avatar_url, rol, nivel, creado_en")
     .eq("id", user.id)
     .single();
 
@@ -17,6 +17,7 @@ export default async function PerfilPage() {
     nombre: user.email?.split("@")[0] ?? "Estudiante",
     avatar_url: null,
     rol: "estudiante",
+    nivel: "A1",
     creado_en: user.created_at,
   };
   const esAdmin = perfilVisible.rol === "admin";
@@ -34,13 +35,23 @@ export default async function PerfilPage() {
     consultas.push(
       supabase
         .from("usuarios")
-        .select("id, nombre")
+        .select("id, nombre, nivel")
         .eq("rol", "estudiante")
         .order("nombre"),
+      supabase
+        .from("codigos_registro")
+        .select("codigo, creado_en")
+        .eq("activo", true)
+        .maybeSingle(),
     );
   }
 
-  const [mensualidadesResult, progresoResult, estudiantesResult] =
+  const [
+    mensualidadesResult,
+    progresoResult,
+    estudiantesResult,
+    codigoRegistroResult,
+  ] =
     await Promise.all(consultas);
 
   return (
@@ -48,8 +59,14 @@ export default async function PerfilPage() {
       usuario={{ id: user.id, email: user.email }}
       perfil={perfilVisible}
       mensualidades={mensualidadesResult.data ?? []}
+      mensualidadesError={
+        mensualidadesResult.error
+          ? "No se pudieron cargar las mensualidades. Comprueba que la tabla existe en Supabase."
+          : null
+      }
       estudiantes={estudiantesResult?.data ?? []}
       testsCompletados={progresoResult.count ?? 0}
+      codigoRegistro={codigoRegistroResult?.data ?? null}
     />
   );
 }

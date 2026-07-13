@@ -1,5 +1,6 @@
 "use client";
 
+import { NIVELES } from "@/lib/niveles";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 
@@ -10,6 +11,7 @@ export default function AdminContentForm({
   onSaved,
 }) {
   const [tipo, setTipo] = useState(contenido?.tipo ?? tipoInicial);
+  const [nivel, setNivel] = useState(contenido?.nivel ?? "A1");
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
 
@@ -24,6 +26,7 @@ export default function AdminContentForm({
       titulo: formData.get("titulo").trim(),
       descripcion: formData.get("descripcion").trim(),
       url: tipo === "juego" ? formData.get("url").trim() : null,
+      nivel: tipo === "juego" ? null : nivel,
     };
     const supabase = createClient();
     const consulta = contenido
@@ -69,6 +72,23 @@ export default function AdminContentForm({
         />
       </label>
 
+      {tipo !== "juego" && (
+        <label className="block text-sm font-medium text-slate-700">
+          Nivel
+          <select
+            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-accent"
+            value={nivel}
+            onChange={(event) => setNivel(event.target.value)}
+          >
+            {NIVELES.map((opcion) => (
+              <option key={opcion} value={opcion}>
+                {opcion}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <label className="block text-sm font-medium text-slate-700">
         Descripción
         <textarea
@@ -96,7 +116,7 @@ export default function AdminContentForm({
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <button
-        className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+        className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
         disabled={guardando}
         type="submit"
       >

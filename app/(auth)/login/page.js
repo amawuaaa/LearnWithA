@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -18,7 +19,6 @@ export default function LoginPage() {
     setCargando(true);
 
     const formData = new FormData(event.currentTarget);
-    const supabase = createClient();
     const email = formData.get("email");
     const password = formData.get("password");
 
@@ -29,27 +29,33 @@ export default function LoginPage() {
         return;
       }
 
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            nombre: formData.get("nombre").trim(),
-          },
-        },
-      });
-
-      if (authError) {
-        setError(
-          authError.message.includes("already registered")
-            ? "Ya existe una cuenta con este email."
-            : "No se pudo crear la cuenta. Revisa los datos.",
-        );
+      let respuesta;
+      let data;
+      try {
+        respuesta = await fetch("/api/registro", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: formData.get("nombre"),
+            email,
+            password,
+            codigo: formData.get("codigo"),
+          }),
+        });
+        data = await respuesta.json();
+      } catch {
+        setError("No se pudo conectar con el servidor.");
         setCargando(false);
         return;
       }
 
-      if (!data.session) {
+      if (!respuesta.ok) {
+        setError(data.error ?? "No se pudo crear la cuenta.");
+        setCargando(false);
+        return;
+      }
+
+      if (data.necesitaConfirmacion) {
         setMensaje(
           "Cuenta creada. Revisa tu email para confirmar la cuenta antes de entrar.",
         );
@@ -57,6 +63,7 @@ export default function LoginPage() {
         return;
       }
     } else {
+      const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -77,8 +84,8 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
       <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <div className="mb-8">
-          <p className="mb-2 text-sm font-semibold uppercase tracking-widest text-accent">
-            Portal de Clase
+          <p className="mb-2 text-lg font-semibold tracking-tight text-slate-900">
+            Learn<span className="text-accent">WithA</span>
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
             {esRegistro ? "Crear una cuenta" : "Iniciar sesión"}
@@ -96,22 +103,35 @@ export default function LoginPage() {
           onSubmit={enviarFormulario}
         >
           {esRegistro && (
-            <label className="block text-sm font-medium text-slate-700">
-              Nombre
-              <input
-                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-indigo-100"
-                name="nombre"
-                autoComplete="name"
-                required
-                maxLength={100}
-              />
-            </label>
+            <>
+              <label className="block text-sm font-medium text-slate-700">
+                Nombre
+                <input
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
+                  name="nombre"
+                  autoComplete="name"
+                  required
+                  maxLength={100}
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-slate-700">
+                Código de clase
+                <input
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
+                  name="codigo"
+                  type="password"
+                  autoComplete="off"
+                  required
+                />
+              </label>
+            </>
           )}
 
           <label className="block text-sm font-medium text-slate-700">
             Email
             <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
               name="email"
               type="email"
               autoComplete="email"
@@ -122,7 +142,7 @@ export default function LoginPage() {
           <label className="block text-sm font-medium text-slate-700">
             Contraseña
             <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-indigo-100"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
               name="password"
               type="password"
               autoComplete={esRegistro ? "new-password" : "current-password"}
@@ -131,11 +151,22 @@ export default function LoginPage() {
             />
           </label>
 
+          {!esRegistro && (
+            <div className="-mt-3 text-right">
+              <Link
+                className="text-sm font-medium text-accent hover:underline"
+                href="/recuperar-password"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+          )}
+
           {esRegistro && (
             <label className="block text-sm font-medium text-slate-700">
               Repetir contraseña
               <input
-                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-indigo-100"
+                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
                 name="confirmarPassword"
                 type="password"
                 autoComplete="new-password"
@@ -158,7 +189,7 @@ export default function LoginPage() {
           )}
 
           <button
-            className="w-full rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             type="submit"
             disabled={cargando}
           >

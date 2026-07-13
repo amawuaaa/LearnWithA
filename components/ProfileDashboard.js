@@ -1,17 +1,16 @@
 "use client";
 
+import { estilosEstadoMensualidad as estilosEstado } from "@/lib/mensualidades";
+import { NIVELES } from "@/lib/niveles";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import AdminBulkMonthlyForm from "./AdminBulkMonthlyForm";
 import AdminMonthlyForm from "./AdminMonthlyForm";
+import AdminRegistrationCode from "./AdminRegistrationCode";
 import Avatar from "./Avatar";
+import ConfirmDialog from "./ConfirmDialog";
 import Modal from "./Modal";
-
-const estilosEstado = {
-  pagada: "bg-emerald-50 text-emerald-700",
-  pendiente: "bg-amber-50 text-amber-700",
-  vencida: "bg-red-50 text-red-700",
-};
 
 function fechaLegible(fecha, opciones = {}) {
   return new Date(`${fecha}T00:00:00`).toLocaleDateString("es-ES", opciones);
@@ -34,6 +33,8 @@ export default function ProfileDashboard({
   mensualidades,
   estudiantes,
   testsCompletados,
+  codigoRegistro,
+  mensualidadesError,
 }) {
   const router = useRouter();
   const esAdmin = perfil.rol === "admin";
@@ -45,6 +46,13 @@ export default function ProfileDashboard({
   const [errorAvatar, setErrorAvatar] = useState("");
   const [modalAbierto, setModalAbierto] = useState(false);
   const [mensualidadEditando, setMensualidadEditando] = useState(null);
+  const [borrandoMensualidad, setBorrandoMensualidad] = useState(null);
+  const [eliminandoMensualidad, setEliminandoMensualidad] = useState(false);
+  const [errorBorradoMensualidad, setErrorBorradoMensualidad] = useState("");
+  const [errorMensualidades, setErrorMensualidades] = useState(
+    mensualidadesError ?? "",
+  );
+  const [errorNivel, setErrorNivel] = useState("");
   const mensualidadActual = !esAdmin ? mensualidades[0] : null;
 
   async function guardarNombre(event) {
@@ -139,16 +147,33 @@ export default function ProfileDashboard({
     router.refresh();
   }
 
-  async function borrarMensualidad(mensualidad) {
-    if (!window.confirm("¿Eliminar esta mensualidad?")) return;
+  async function confirmarBorradoMensualidad() {
+    setEliminandoMensualidad(true);
     const supabase = createClient();
     const { error } = await supabase
       .from("mensualidades")
       .delete()
-      .eq("id", mensualidad.id);
+      .eq("id", borrandoMensualidad.id);
+    setEliminandoMensualidad(false);
 
     if (error) {
-      window.alert("No se pudo eliminar la mensualidad.");
+      setErrorBorradoMensualidad("No se pudo eliminar la mensualidad.");
+      return;
+    }
+    setBorrandoMensualidad(null);
+    router.refresh();
+  }
+
+  async function cambiarNivelEstudiante(estudianteId, nuevoNivel) {
+    setErrorNivel("");
+    const supabase = createClient();
+    const { error } = await supabase.rpc("actualizar_nivel_estudiante", {
+      p_estudiante_id: estudianteId,
+      p_nivel: nuevoNivel,
+    });
+
+    if (error) {
+      setErrorNivel("No se pudo actualizar el nivel.");
       return;
     }
     router.refresh();
@@ -281,6 +306,14 @@ export default function ProfileDashboard({
             </div>
             {!esAdmin && (
               <div className="border-t border-slate-100 pt-5">
+                <p className="text-sm text-slate-500">Tu nivel actual</p>
+                <p className="mt-1 text-2xl font-semibold text-slate-900">
+                  {perfil.nivel ?? "A1"}
+                </p>
+              </div>
+            )}
+            {!esAdmin && (
+              <div className="border-t border-slate-100 pt-5">
                 <p className="text-sm text-slate-500">Última mensualidad</p>
                 {mensualidadActual ? (
                   <>
@@ -303,6 +336,8 @@ export default function ProfileDashboard({
           </div>
         </aside>
       </div>
+
+      {esAdmin && <AdminRegistrationCode codigoInicial={codigoRegistro} />}
 
       {!esAdmin && (
         <section className="mt-8">
@@ -358,17 +393,86 @@ export default function ProfileDashboard({
 
       {esAdmin && (
         <section className="mt-8">
-          <div className="mb-4 flex items-center justify-between gap-4">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-slate-900">
+              Nivel de los alumnos
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Sube el nivel de un alumno cuando esté listo para el siguiente
+              reto. Los tests y el vocabulario de niveles superiores
+              quedarán desbloqueados para él.
+            </p>
+            {errorNivel && (
+              <p className="mt-2 text-sm text-red-700">{errorNivel}</p>
+            )}
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Alumno</th>
+                  <th className="px-4 py-3 font-medium">Nivel</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {estudiantes.map((estudiante) => (
+                  <tr key={estudiante.id}>
+                    <td className="px-4 py-3">{estudiante.nombre}</td>
+                    <td className="px-4 py-3">
+                      <select
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-accent"
+                        value={estudiante.nivel ?? "A1"}
+                        onChange={(event) =>
+                          cambiarNivelEstudiante(
+                            estudiante.id,
+                            event.target.value,
+                          )
+                        }
+                      >
+                        {NIVELES.map((opcion) => (
+                          <option key={opcion} value={opcion}>
+                            {opcion}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+                {estudiantes.length === 0 && (
+                  <tr>
+                    <td
+                      className="px-4 py-8 text-center text-slate-500"
+                      colSpan="2"
+                    >
+                      Aún no hay alumnos.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {esAdmin && (
+        <section className="mt-8">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">
                 Gestión de mensualidades
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Registra importes, vencimientos y estados de los alumnos.
+                Genera el mes para todos los alumnos o registra casos puntuales.
               </p>
+              {errorMensualidades && (
+                <p className="mt-2 text-sm text-red-700" role="alert">
+                  {errorMensualidades}
+                </p>
+              )}
             </div>
             <button
-              className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+              className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
               type="button"
               onClick={() => abrirMensualidad()}
             >
@@ -376,7 +480,12 @@ export default function ProfileDashboard({
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <AdminBulkMonthlyForm
+            estudiantes={estudiantes}
+            onSaved={() => router.refresh()}
+          />
+
+          <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
                 <tr>
@@ -418,7 +527,10 @@ export default function ProfileDashboard({
                         <button
                           className="font-medium text-red-600 hover:underline"
                           type="button"
-                          onClick={() => borrarMensualidad(mensualidad)}
+                          onClick={() => {
+                            setErrorBorradoMensualidad("");
+                            setBorrandoMensualidad(mensualidad);
+                          }}
                         >
                           Eliminar
                         </button>
@@ -456,6 +568,16 @@ export default function ProfileDashboard({
           onSaved={mensualidadGuardada}
         />
       </Modal>
+
+      <ConfirmDialog
+        abierto={borrandoMensualidad !== null}
+        titulo="Eliminar mensualidad"
+        mensaje="¿Eliminar esta mensualidad? Esta acción no se puede deshacer."
+        cargando={eliminandoMensualidad}
+        error={errorBorradoMensualidad}
+        onConfirm={confirmarBorradoMensualidad}
+        onCancel={() => setBorrandoMensualidad(null)}
+      />
     </>
   );
 }

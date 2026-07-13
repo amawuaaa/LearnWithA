@@ -2,11 +2,15 @@
   "name": "portal-clase",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
@@ -19,6 +23,8 @@
     "@tailwindcss/postcss": "^4",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.35",
-    "tailwindcss": "^4"
+    "supabase": "^2.109.1",
+    "tailwindcss": "^4",
+    "vitest": "^4.1.10"
   }
 }

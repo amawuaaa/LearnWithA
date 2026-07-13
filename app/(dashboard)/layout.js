@@ -25,10 +25,24 @@ export default async function DashboardLayout({ children }) {
     avatar_url: null,
     rol: "estudiante",
   };
+  let consultaNoLeidos = supabase
+    .from("mensajes")
+    .select("id", { count: "exact", head: true })
+    .is("leido_en", null)
+    .neq("remitente_id", user.id);
+
+  if (perfilVisible.rol !== "admin") {
+    consultaNoLeidos = consultaNoLeidos.eq("estudiante_id", user.id);
+  }
+
+  const { count: mensajesNoLeidos } = await consultaNoLeidos;
 
   return (
     <div className="min-h-screen">
-      <Sidebar perfil={perfilVisible} />
+      <Sidebar
+        perfil={{ ...perfilVisible, id: user.id }}
+        mensajesNoLeidos={mensajesNoLeidos ?? 0}
+      />
       <main className="min-h-screen px-4 pb-10 pt-24 md:ml-64 md:px-8 md:pt-8">
         <div className="mx-auto max-w-6xl">{children}</div>
       </main>

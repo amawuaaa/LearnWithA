@@ -1,21 +1,26 @@
 "use client";
 
+import { nivelBadgeClase, nivelDesbloqueado } from "@/lib/niveles";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import AdminTestForm from "./AdminTestForm";
+import ConfirmDialog from "./ConfirmDialog";
 import Modal from "./Modal";
 import TestPlayer from "./TestPlayer";
 
 export default function TestsDashboard({
   tests,
   esAdmin,
-  estudianteId,
+  nivelUsuario,
   resultados,
 }) {
   const router = useRouter();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [borrando, setBorrando] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorBorrado, setErrorBorrado] = useState("");
 
   function abrir(test = null) {
     setEditando(test);
@@ -27,15 +32,20 @@ export default function TestsDashboard({
     router.refresh();
   }
 
-  async function borrar(test) {
-    if (!window.confirm(`¿Eliminar el test “${test.titulo}”?`)) return;
+  async function confirmarBorrado() {
+    setEliminando(true);
     const supabase = createClient();
-    const { error } = await supabase.from("tests").delete().eq("id", test.id);
+    const { error } = await supabase
+      .from("tests")
+      .delete()
+      .eq("id", borrando.id);
+    setEliminando(false);
 
     if (error) {
-      window.alert("No se pudo eliminar el test.");
+      setErrorBorrado("No se pudo eliminar el test.");
       return;
     }
+    setBorrando(null);
     router.refresh();
   }
 
@@ -55,7 +65,7 @@ export default function TestsDashboard({
         </div>
         {esAdmin && (
           <button
-            className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+            className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
             type="button"
             onClick={() => abrir()}
           >
@@ -75,7 +85,12 @@ export default function TestsDashboard({
               key={test.id}
               className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
             >
-              <h2 className="font-semibold text-slate-900">{test.titulo}</h2>
+              <span className={nivelBadgeClase(test.nivel)}>
+                Nivel {test.nivel}
+              </span>
+              <h2 className="mt-2 font-semibold text-slate-900">
+                {test.titulo}
+              </h2>
               <p className="mt-1 text-sm text-slate-500">
                 {test.preguntas.length} preguntas
               </p>
@@ -90,7 +105,10 @@ export default function TestsDashboard({
                 <button
                   className="text-sm font-medium text-red-600 hover:underline"
                   type="button"
-                  onClick={() => borrar(test)}
+                  onClick={() => {
+                    setErrorBorrado("");
+                    setBorrando(test);
+                  }}
                 >
                   Eliminar
                 </button>
@@ -100,13 +118,31 @@ export default function TestsDashboard({
         </div>
       ) : (
         <div className="space-y-4">
-          {tests.map((test) => (
-            <TestPlayer
-              key={test.id}
-              test={test}
-              estudianteId={estudianteId}
-            />
-          ))}
+          {tests.map((test) =>
+            nivelDesbloqueado(test.nivel, nivelUsuario) ? (
+              <TestPlayer key={test.id} test={test} />
+            ) : (
+              <article
+                key={test.id}
+                className="flex items-center justify-between gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5"
+              >
+                <div>
+                  <span className={nivelBadgeClase(test.nivel)}>
+                Nivel {test.nivel}
+              </span>
+                  <h2 className="mt-2 font-semibold text-slate-500">
+                    {test.titulo}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Se desbloquea al alcanzar el nivel {test.nivel}.
+                  </p>
+                </div>
+                <span aria-hidden="true" className="text-2xl">
+                  🔒
+                </span>
+              </article>
+            ),
+          )}
         </div>
       )}
 
@@ -121,8 +157,9 @@ export default function TestsDashboard({
                 <tr>
                   <th className="px-4 py-3 font-medium">Alumno</th>
                   <th className="px-4 py-3 font-medium">Test</th>
-                  <th className="px-4 py-3 font-medium">Puntuación</th>
-                  <th className="px-4 py-3 font-medium">Fecha</th>
+                  <th className="px-4 py-3 font-medium">Mejor puntuación</th>
+                  <th className="px-4 py-3 font-medium">Intentos</th>
+                  <th className="px-4 py-3 font-medium">Último intento</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -138,6 +175,7 @@ export default function TestsDashboard({
                       {resultado.puntuacion} /{" "}
                       {resultado.tests?.preguntas?.length ?? "—"}
                     </td>
+                    <td className="px-4 py-3">{resultado.intentos}</td>
                     <td className="px-4 py-3 text-slate-500">
                       <time suppressHydrationWarning>
                         {new Date(resultado.completado_en).toLocaleDateString(
@@ -151,7 +189,7 @@ export default function TestsDashboard({
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-slate-500"
-                      colSpan="4"
+                      colSpan="5"
                     >
                       Aún no hay resultados.
                     </td>
@@ -174,6 +212,16 @@ export default function TestsDashboard({
           onSaved={guardado}
         />
       </Modal>
+
+      <ConfirmDialog
+        abierto={borrando !== null}
+        titulo="Eliminar test"
+        mensaje={`¿Eliminar el test "${borrando?.titulo}"? Esta acción no se puede deshacer.`}
+        cargando={eliminando}
+        error={errorBorrado}
+        onConfirm={confirmarBorrado}
+        onCancel={() => setBorrando(null)}
+      />
     </>
   );
 }

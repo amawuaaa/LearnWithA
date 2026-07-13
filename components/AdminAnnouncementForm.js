@@ -53,7 +53,7 @@ export default function AdminAnnouncementForm({
       <label className="block text-sm font-medium text-slate-700">
         Título
         <input
-          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-accent focus:ring-2 focus:ring-indigo-100"
+          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-accent focus:ring-2 focus:ring-accent-muted"
           name="titulo"
           defaultValue={anuncio?.titulo}
           required
@@ -64,7 +64,7 @@ export default function AdminAnnouncementForm({
       <label className="block text-sm font-medium text-slate-700">
         Contenido
         <textarea
-          className="mt-2 min-h-36 w-full resize-y rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-accent focus:ring-2 focus:ring-indigo-100"
+          className="mt-2 min-h-36 w-full resize-y rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-accent focus:ring-2 focus:ring-accent-muted"
           name="contenido"
           defaultValue={anuncio?.contenido}
           required
@@ -74,7 +74,7 @@ export default function AdminAnnouncementForm({
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <button
-        className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+        className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
         disabled={guardando}
         type="submit"
       >

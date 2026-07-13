@@ -7,7 +7,7 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Portal de Clase",
+  title: "LearnWithA",
   description: "Recursos, noticias y tests para la clase.",
 };
 

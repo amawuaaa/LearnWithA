@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 
-export default function TestPlayer({ test, estudianteId }) {
+export default function TestPlayer({ test }) {
   const [abierto, setAbierto] = useState(false);
   const [respuestas, setRespuestas] = useState({});
   const [resultado, setResultado] = useState(null);
@@ -19,31 +19,24 @@ export default function TestPlayer({ test, estudianteId }) {
       return;
     }
 
-    const aciertos = test.preguntas.reduce((total, pregunta, indice) => {
-      const correcta =
-        typeof pregunta.respuesta_correcta === "number"
-          ? pregunta.opciones[pregunta.respuesta_correcta]
-          : pregunta.respuesta_correcta;
-      return total + (respuestas[indice] === correcta ? 1 : 0);
-    }, 0);
-
     setGuardando(true);
     const supabase = createClient();
-    const { error: insertError } = await supabase
-      .from("estudiantes_progreso")
-      .insert({
-        estudiante_id: estudianteId,
-        test_id: test.id,
-        puntuacion: aciertos,
-      });
+    // La calificación se hace en el servidor (RPC) para que las respuestas
+    // correctas nunca lleguen al navegador del alumno.
+    const { data, error: rpcError } = await supabase
+      .rpc("enviar_resultado_test", {
+        p_test_id: test.id,
+        p_respuestas: respuestas,
+      })
+      .single();
 
-    if (insertError) {
+    if (rpcError || !data) {
       setError("No se pudo guardar la puntuación.");
       setGuardando(false);
       return;
     }
 
-    setResultado(aciertos);
+    setResultado(data);
     setGuardando(false);
   }
 
@@ -105,20 +98,31 @@ export default function TestPlayer({ test, estudianteId }) {
 
           {resultado === null ? (
             <button
-              className="mt-6 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+              className="mt-6 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
               type="submit"
               disabled={guardando}
             >
               {guardando ? "Guardando…" : "Terminar test"}
             </button>
           ) : (
-            <div className="mt-6 rounded-lg bg-indigo-50 p-4">
-              <p className="font-semibold text-indigo-900">
-                Resultado: {resultado} de {test.preguntas.length}
+            <div className="mt-6 rounded-lg bg-accent-muted p-4">
+              <p className="font-semibold text-teal-900">
+                Resultado: {resultado.puntuacion} de {resultado.total}
               </p>
-              <p className="mt-1 text-sm text-indigo-700">
-                Tu puntuación se ha guardado correctamente.
+              <p className="mt-1 text-sm text-teal-700">
+                Intento {resultado.intentos}. Se conserva tu mejor puntuación.
               </p>
+              <button
+                className="mt-3 text-sm font-semibold text-accent hover:underline"
+                type="button"
+                onClick={() => {
+                  setRespuestas({});
+                  setResultado(null);
+                  setError("");
+                }}
+              >
+                Repetir test
+              </button>
             </div>
           )}
         </form>

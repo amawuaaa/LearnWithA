@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
 export async function middleware(request) {
+  // El registro valida su propio código privado en el servidor.
+  if (request.nextUrl.pathname === "/api/registro") {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -32,8 +37,12 @@ export async function middleware(request) {
   } = await supabase.auth.getUser();
 
   const esLogin = request.nextUrl.pathname === "/login";
+  const esRutaPublica =
+    esLogin ||
+    request.nextUrl.pathname === "/recuperar-password" ||
+    request.nextUrl.pathname === "/auth/callback";
 
-  if (!user && !esLogin) {
+  if (!user && !esRutaPublica) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function barajar(elementos) {
   const copia = [...elementos];
@@ -12,17 +12,15 @@ function barajar(elementos) {
   return copia;
 }
 
-function crearTablero(pares) {
-  const tarjetas = pares.flatMap((par, indice) => [
-    { id: `${indice}-termino`, parId: indice, texto: par.termino },
-    { id: `${indice}-pareja`, parId: indice, texto: par.pareja },
-  ]);
-  return barajar(tarjetas);
+function formatearTiempo(totalSegundos) {
+  const minutos = Math.floor(totalSegundos / 60);
+  const segundos = totalSegundos % 60;
+  return `${minutos}:${segundos.toString().padStart(2, "0")}`;
 }
 
-export default function MemoryGame({ juego, estudianteId }) {
+export default function MemoryGame({ juego, estudianteId, mejorResultado }) {
   const [abierto, setAbierto] = useState(false);
-  const [tablero, setTablero] = useState(() => crearTablero(juego.pares));
+  const [tablero, setTablero] = useState(() => barajar(juego.cartas));
   const [volteadas, setVolteadas] = useState([]);
   const [resueltas, setResueltas] = useState([]);
   const [intentos, setIntentos] = useState(0);
@@ -30,22 +28,42 @@ export default function MemoryGame({ juego, estudianteId }) {
   const [guardado, setGuardado] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const [inicio, setInicio] = useState(null);
+  const [segundos, setSegundos] = useState(0);
+  const [duracionFinal, setDuracionFinal] = useState(null);
 
-  const totalParejas = useMemo(() => juego.pares.length, [juego.pares]);
+  const totalParejas = useMemo(
+    () => Math.floor(juego.cartas.length / 2),
+    [juego.cartas],
+  );
 
-  const completado = resueltas.length === totalParejas;
+  const completado =
+    tablero.length > 0 && resueltas.length === tablero.length;
+
+  useEffect(() => {
+    if (!abierto || !inicio || completado) return undefined;
+
+    const intervalo = setInterval(() => {
+      setSegundos(Math.floor((Date.now() - inicio) / 1000));
+    }, 1000);
+
+    return () => clearInterval(intervalo);
+  }, [abierto, completado, inicio]);
 
   function reiniciar() {
-    setTablero(crearTablero(juego.pares));
+    setTablero(barajar(juego.cartas));
     setVolteadas([]);
     setResueltas([]);
     setIntentos(0);
     setBloqueado(false);
     setGuardado(false);
     setError("");
+    setInicio(null);
+    setSegundos(0);
+    setDuracionFinal(null);
   }
 
-  async function guardarResultado(intentosFinales) {
+  async function guardarResultado(intentosFinales, duracionSegundos) {
     setGuardando(true);
     const supabase = createClient();
     const { error: insertError } = await supabase
@@ -54,6 +72,7 @@ export default function MemoryGame({ juego, estudianteId }) {
         estudiante_id: estudianteId,
         juego_id: juego.id,
         intentos: intentosFinales,
+        duracion_segundos: duracionSegundos,
       });
 
     if (insertError) {
@@ -66,11 +85,12 @@ export default function MemoryGame({ juego, estudianteId }) {
     setGuardando(false);
   }
 
-  function voltear(tarjeta) {
+  async function voltear(tarjeta) {
     if (bloqueado) return;
     if (volteadas.some((v) => v.id === tarjeta.id)) return;
-    if (resueltas.includes(tarjeta.parId)) return;
+    if (resueltas.includes(tarjeta.id)) return;
 
+    if (!inicio) setInicio(Date.now());
     const nuevasVolteadas = [...volteadas, tarjeta];
     setVolteadas(nuevasVolteadas);
 
@@ -78,16 +98,30 @@ export default function MemoryGame({ juego, estudianteId }) {
 
     setBloqueado(true);
     const [primera, segunda] = nuevasVolteadas;
-    const acierto = primera.parId === segunda.parId;
     const siguientesIntentos = intentos + 1;
     setIntentos(siguientesIntentos);
 
+    // La comprobación se hace en el servidor para que el navegador nunca
+    // reciba la lista completa de parejas.
+    const supabase = createClient();
+    const { data: acierto } = await supabase.rpc("comprobar_pareja_memoria", {
+      p_juego_id: juego.id,
+      p_texto_a: primera.texto,
+      p_texto_b: segunda.texto,
+    });
+
     setTimeout(() => {
       if (acierto) {
-        const siguientesResueltas = [...resueltas, primera.parId];
+        const siguientesResueltas = [...resueltas, primera.id, segunda.id];
         setResueltas(siguientesResueltas);
-        if (siguientesResueltas.length === totalParejas) {
-          guardarResultado(siguientesIntentos);
+        if (siguientesResueltas.length === tablero.length) {
+          const tiempoFinal = Math.max(
+            1,
+            Math.floor((Date.now() - (inicio ?? Date.now())) / 1000),
+          );
+          setSegundos(tiempoFinal);
+          setDuracionFinal(tiempoFinal);
+          guardarResultado(siguientesIntentos, tiempoFinal);
         }
       }
       setVolteadas([]);
@@ -95,66 +129,159 @@ export default function MemoryGame({ juego, estudianteId }) {
     }, 700);
   }
 
+  const estrellas =
+    intentos <= totalParejas
+      ? 3
+      : intentos <= Math.ceil(totalParejas * 1.5)
+        ? 2
+        : 1;
+
   return (
-    <article className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <button
-        className="flex w-full items-center justify-between gap-4 p-5 text-left"
+        className="flex w-full items-center justify-between gap-4 p-5 text-left transition hover:bg-slate-50"
         type="button"
-        onClick={() => setAbierto(!abierto)}
+        onClick={() => {
+          if (abierto) reiniciar();
+          setAbierto(!abierto);
+        }}
         aria-expanded={abierto}
       >
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900">
-            {juego.titulo}
-          </h2>
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-teal-100 to-cyan-100 text-xl">
+            🎯
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {juego.titulo}
+            </h2>
           <p className="mt-1 text-sm text-slate-500">
             {totalParejas} {totalParejas === 1 ? "pareja" : "parejas"}
+            {totalParejas === 8 ? " · Tablero 4×4" : ""}
+            {mejorResultado && (
+              <>
+                {" "}
+                · Mejor: {mejorResultado.intentos} intentos
+                {mejorResultado.duracion_segundos
+                  ? ` en ${formatearTiempo(mejorResultado.duracion_segundos)}`
+                  : ""}
+              </>
+            )}
           </p>
+          </div>
         </div>
-        <span className="text-sm font-medium text-accent">
+        <span className="rounded-lg bg-accent-muted px-3 py-2 text-sm font-semibold text-accent">
           {abierto ? "Ocultar" : "Jugar"}
         </span>
       </button>
 
       {abierto && (
-        <div className="border-t border-slate-200 p-5">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="border-t border-slate-800 bg-slate-950 p-2.5 sm:p-5">
+          <div className="mx-auto max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-teal-950 via-slate-900 to-cyan-950 p-2.5 shadow-2xl sm:p-4">
+            <div className="mb-4 grid grid-cols-3 divide-x divide-white/10 rounded-xl border border-white/10 bg-white/5 py-3 text-center">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-200/60">
+                  Parejas
+                </p>
+                <p className="mt-1 font-bold text-white">
+                  {resueltas.length / 2}/{totalParejas}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-200/60">
+                  Intentos
+                </p>
+                <p className="mt-1 font-bold text-white">{intentos}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-teal-200/60">
+                  Tiempo
+                </p>
+                <p className="mt-1 font-mono font-bold text-white">
+                  {formatearTiempo(duracionFinal ?? segundos)}
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-teal-400 transition-all duration-500"
+                style={{
+                  width: `${(resueltas.length / tablero.length) * 100}%`,
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-4 gap-1.5 sm:gap-2.5">
             {tablero.map((tarjeta) => {
               const volteada = volteadas.some((v) => v.id === tarjeta.id);
-              const resuelta = resueltas.includes(tarjeta.parId);
+              const resuelta = resueltas.includes(tarjeta.id);
               const visible = volteada || resuelta;
 
               return (
                 <button
                   key={tarjeta.id}
                   type="button"
-                  className={`flex h-20 items-center justify-center rounded-lg border p-2 text-center text-sm font-medium transition ${
+                  className={`flex aspect-square min-w-0 items-center justify-center overflow-hidden rounded-xl border p-1.5 text-center font-medium shadow-lg transition-all duration-300 sm:p-2 ${
                     resuelta
-                      ? "border-green-300 bg-green-50 text-green-700"
+                      ? "scale-95 border-emerald-300/70 bg-emerald-50 text-emerald-700 shadow-emerald-500/10"
                       : visible
-                        ? "border-accent bg-indigo-50 text-slate-900"
-                        : "border-slate-300 bg-slate-100 text-transparent hover:bg-slate-200"
+                        ? "border-white bg-white text-slate-900 shadow-white/10"
+                        : "border-white/15 bg-gradient-to-br from-teal-500 via-cyan-600 to-emerald-600 text-white hover:-translate-y-1 hover:border-white/40 hover:shadow-teal-500/30"
                   }`}
                   onClick={() => voltear(tarjeta)}
                   disabled={resuelta || bloqueado}
                 >
-                  {visible ? tarjeta.texto : "?"}
+                  {visible ? (
+                    <span className="flex flex-col items-center justify-center gap-1">
+                      {tarjeta.emoji && (
+                        <span className="text-2xl sm:text-4xl" aria-hidden="true">
+                          {tarjeta.emoji}
+                        </span>
+                      )}
+                      <span
+                        className={
+                          tarjeta.emoji
+                            ? "break-words text-[9px] leading-tight sm:text-xs"
+                            : "break-words text-[10px] leading-tight sm:text-sm"
+                        }
+                      >
+                        {tarjeta.texto}
+                      </span>
+                    </span>
+                  ) : (
+                    <span
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-white/10 text-lg font-bold text-white/90 sm:h-10 sm:w-10 sm:text-2xl"
+                      aria-label="Tarjeta oculta"
+                    >
+                      ✦
+                    </span>
+                  )}
                 </button>
               );
             })}
+            </div>
           </div>
 
-          <p className="mt-4 text-sm text-slate-500">Intentos: {intentos}</p>
-
-          {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
+          {error && (
+            <p className="mt-3 rounded-lg bg-red-950/70 p-3 text-sm text-red-200">
+              {error}
+            </p>
+          )}
 
           {completado && (
-            <div className="mt-4 rounded-lg bg-indigo-50 p-4">
-              <p className="font-semibold text-indigo-900">
+            <div className="mx-auto mt-4 max-w-xl rounded-xl border border-amber-300/20 bg-gradient-to-r from-amber-400/10 to-yellow-300/10 p-5 text-center">
+              <p className="font-semibold text-white">
                 ¡Completado en {intentos}{" "}
                 {intentos === 1 ? "intento" : "intentos"}!
               </p>
-              <p className="mt-1 text-sm text-indigo-700">
+              <p className="mt-2 text-2xl" aria-label={`${estrellas} estrellas`}>
+                {"⭐".repeat(estrellas)}
+              </p>
+              <p className="mt-1 text-sm text-teal-200">
+                Tiempo: {formatearTiempo(duracionFinal ?? segundos)}
+              </p>
+              <p className="mt-1 text-sm text-teal-200">
                 {guardando
                   ? "Guardando resultado…"
                   : guardado
@@ -162,7 +289,7 @@ export default function MemoryGame({ juego, estudianteId }) {
                     : ""}
               </p>
               <button
-                className="mt-3 text-sm font-medium text-accent hover:underline"
+                className="mt-4 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-accent-muted"
                 type="button"
                 onClick={reiniciar}
               >

@@ -3,7 +3,7 @@ export default function Avatar({ nombre, url, className = "h-10 w-10" }) {
 
   return (
     <span
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-100 font-semibold text-accent ${className}`}
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-soft font-semibold text-accent ${className}`}
     >
       {inicial}
       {url && (

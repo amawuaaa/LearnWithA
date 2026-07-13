@@ -4,8 +4,16 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import AdminMemoryForm from "./AdminMemoryForm";
+import ConfirmDialog from "./ConfirmDialog";
 import MemoryGame from "./MemoryGame";
 import Modal from "./Modal";
+
+function formatearTiempo(totalSegundos) {
+  if (!totalSegundos) return "—";
+  const minutos = Math.floor(totalSegundos / 60);
+  const segundos = totalSegundos % 60;
+  return `${minutos}:${segundos.toString().padStart(2, "0")}`;
+}
 
 export default function MemoriaDashboard({
   juegos,
@@ -16,6 +24,9 @@ export default function MemoriaDashboard({
   const router = useRouter();
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [borrando, setBorrando] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorBorrado, setErrorBorrado] = useState("");
 
   function abrir(juego = null) {
     setEditando(juego);
@@ -27,18 +38,20 @@ export default function MemoriaDashboard({
     router.refresh();
   }
 
-  async function borrar(juego) {
-    if (!window.confirm(`¿Eliminar el juego “${juego.titulo}”?`)) return;
+  async function confirmarBorrado() {
+    setEliminando(true);
     const supabase = createClient();
     const { error } = await supabase
       .from("juegos_memoria")
       .delete()
-      .eq("id", juego.id);
+      .eq("id", borrando.id);
+    setEliminando(false);
 
     if (error) {
-      window.alert("No se pudo eliminar el juego.");
+      setErrorBorrado("No se pudo eliminar el juego.");
       return;
     }
+    setBorrando(null);
     router.refresh();
   }
 
@@ -58,7 +71,7 @@ export default function MemoriaDashboard({
         </div>
         {esAdmin && (
           <button
-            className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+            className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
             type="button"
             onClick={() => abrir()}
           >
@@ -82,6 +95,16 @@ export default function MemoriaDashboard({
               <p className="mt-1 text-sm text-slate-500">
                 {juego.pares.length} parejas
               </p>
+              <div className="mt-4 flex flex-wrap gap-2 text-2xl">
+                {juego.pares.slice(0, 8).map((par, indice) => (
+                  <span
+                    key={`${par.termino}-${indice}`}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-muted"
+                  >
+                    {par.emoji || "✦"}
+                  </span>
+                ))}
+              </div>
               <div className="mt-5 flex gap-3">
                 <button
                   className="text-sm font-medium text-accent hover:underline"
@@ -93,7 +116,10 @@ export default function MemoriaDashboard({
                 <button
                   className="text-sm font-medium text-red-600 hover:underline"
                   type="button"
-                  onClick={() => borrar(juego)}
+                  onClick={() => {
+                    setErrorBorrado("");
+                    setBorrando(juego);
+                  }}
                 >
                   Eliminar
                 </button>
@@ -108,6 +134,9 @@ export default function MemoriaDashboard({
               key={juego.id}
               juego={juego}
               estudianteId={estudianteId}
+              mejorResultado={resultados.find(
+                (resultado) => resultado.juego_id === juego.id,
+              )}
             />
           ))}
         </div>
@@ -125,6 +154,7 @@ export default function MemoriaDashboard({
                   <th className="px-4 py-3 font-medium">Alumno</th>
                   <th className="px-4 py-3 font-medium">Juego</th>
                   <th className="px-4 py-3 font-medium">Intentos</th>
+                  <th className="px-4 py-3 font-medium">Tiempo</th>
                   <th className="px-4 py-3 font-medium">Fecha</th>
                 </tr>
               </thead>
@@ -140,6 +170,9 @@ export default function MemoriaDashboard({
                     <td className="px-4 py-3 font-medium">
                       {resultado.intentos}
                     </td>
+                    <td className="px-4 py-3 font-mono text-slate-600">
+                      {formatearTiempo(resultado.duracion_segundos)}
+                    </td>
                     <td className="px-4 py-3 text-slate-500">
                       <time suppressHydrationWarning>
                         {new Date(resultado.completado_en).toLocaleDateString(
@@ -153,7 +186,7 @@ export default function MemoriaDashboard({
                   <tr>
                     <td
                       className="px-4 py-8 text-center text-slate-500"
-                      colSpan="4"
+                      colSpan="5"
                     >
                       Aún no hay resultados.
                     </td>
@@ -176,6 +209,16 @@ export default function MemoriaDashboard({
           onSaved={guardado}
         />
       </Modal>
+
+      <ConfirmDialog
+        abierto={borrando !== null}
+        titulo="Eliminar juego"
+        mensaje={`¿Eliminar el juego "${borrando?.titulo}"? Esta acción no se puede deshacer.`}
+        cargando={eliminando}
+        error={errorBorrado}
+        onConfirm={confirmarBorrado}
+        onCancel={() => setBorrando(null)}
+      />
     </>
   );
 }

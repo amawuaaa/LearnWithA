@@ -1,7 +1,9 @@
 "use client";
 
+import { NIVELES } from "@/lib/niveles";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
+import ConfirmDialog from "./ConfirmDialog";
 
 const preguntaVacia = () => ({
   pregunta: "",
@@ -11,11 +13,72 @@ const preguntaVacia = () => ({
 
 export default function AdminTestForm({ test, onSaved }) {
   const [titulo, setTitulo] = useState(test?.titulo ?? "");
+  const [nivel, setNivel] = useState(test?.nivel ?? "A1");
   const [preguntas, setPreguntas] = useState(
     test?.preguntas?.length ? test.preguntas : [preguntaVacia()],
   );
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [tema, setTema] = useState("");
+  const [generando, setGenerando] = useState(false);
+  const [errorIa, setErrorIa] = useState("");
+  const [confirmandoReemplazo, setConfirmandoReemplazo] = useState(false);
+
+  function hayContenidoManual() {
+    return (
+      titulo.trim() !== "" ||
+      preguntas.some(
+        (pregunta) =>
+          pregunta.pregunta.trim() !== "" ||
+          pregunta.opciones.some((opcion) => opcion.trim() !== ""),
+      )
+    );
+  }
+
+  function generarConIa() {
+    const temaLimpio = tema.trim();
+    if (!temaLimpio) {
+      setErrorIa("Escribe un tema para generar el test.");
+      return;
+    }
+
+    if (hayContenidoManual()) {
+      setConfirmandoReemplazo(true);
+      return;
+    }
+
+    ejecutarGeneracion();
+  }
+
+  async function ejecutarGeneracion() {
+    const temaLimpio = tema.trim();
+    setConfirmandoReemplazo(false);
+    setErrorIa("");
+    setGenerando(true);
+
+    try {
+      const respuesta = await fetch("/api/generar-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tema: temaLimpio, numPreguntas: 5 }),
+      });
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        setErrorIa(datos.error ?? "No se pudo generar el test.");
+        return;
+      }
+
+      setTitulo(datos.titulo ?? temaLimpio);
+      setPreguntas(
+        datos.preguntas?.length ? datos.preguntas : [preguntaVacia()],
+      );
+    } catch {
+      setErrorIa("No se pudo generar el test.");
+    } finally {
+      setGenerando(false);
+    }
+  }
 
   function actualizarPregunta(indice, cambios) {
     setPreguntas((actuales) =>
@@ -69,7 +132,11 @@ export default function AdminTestForm({ test, onSaved }) {
 
     setGuardando(true);
     const supabase = createClient();
-    const valores = { titulo: titulo.trim(), preguntas: preguntasLimpias };
+    const valores = {
+      titulo: titulo.trim(),
+      nivel,
+      preguntas: preguntasLimpias,
+    };
     const consulta = test
       ? supabase.from("tests").update(valores).eq("id", test.id)
       : supabase.from("tests").insert(valores);
@@ -86,15 +153,59 @@ export default function AdminTestForm({ test, onSaved }) {
 
   return (
     <form className="space-y-6" onSubmit={guardar}>
-      <label className="block text-sm font-medium text-slate-700">
-        Título del test
-        <input
-          className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-accent"
-          value={titulo}
-          onChange={(event) => setTitulo(event.target.value)}
-          required
-        />
-      </label>
+      <div className="rounded-xl border border-dashed border-accent/40 bg-accent-muted/40 p-4">
+        <label className="block text-sm font-medium text-slate-700">
+          Generar con IA
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            <input
+              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
+              placeholder="Ej: verbos irregulares en pasado, nivel B1"
+              value={tema}
+              onChange={(event) => setTema(event.target.value)}
+              disabled={generando}
+            />
+            <button
+              className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+              type="button"
+              onClick={generarConIa}
+              disabled={generando}
+            >
+              {generando ? "Generando…" : "Generar"}
+            </button>
+          </div>
+        </label>
+        <p className="mt-2 text-xs text-slate-500">
+          Genera 5 preguntas de ejemplo que puedes revisar y editar antes de guardar.
+        </p>
+        {errorIa && <p className="mt-2 text-sm text-red-700">{errorIa}</p>}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-slate-700">
+          Título del test
+          <input
+            className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-accent"
+            value={titulo}
+            onChange={(event) => setTitulo(event.target.value)}
+            required
+          />
+        </label>
+
+        <label className="block text-sm font-medium text-slate-700">
+          Nivel
+          <select
+            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 outline-none focus:border-accent"
+            value={nivel}
+            onChange={(event) => setNivel(event.target.value)}
+          >
+            {NIVELES.map((opcion) => (
+              <option key={opcion} value={opcion}>
+                {opcion}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       <div className="space-y-5">
         {preguntas.map((pregunta, indicePregunta) => (
@@ -217,13 +328,23 @@ export default function AdminTestForm({ test, onSaved }) {
 
       <div>
         <button
-          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
           disabled={guardando}
           type="submit"
         >
           {guardando ? "Guardando…" : test ? "Guardar cambios" : "Crear test"}
         </button>
       </div>
+
+      <ConfirmDialog
+        abierto={confirmandoReemplazo}
+        titulo="Reemplazar contenido"
+        mensaje="Esto reemplazará el título y las preguntas actuales del formulario. ¿Continuar?"
+        confirmLabel="Reemplazar"
+        peligroso={false}
+        onConfirm={ejecutarGeneracion}
+        onCancel={() => setConfirmandoReemplazo(false)}
+      />
     </form>
   );
 }

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import AdminAnnouncementForm from "./AdminAnnouncementForm";
+import ConfirmDialog from "./ConfirmDialog";
 import Modal from "./Modal";
 
 function ordenar(anuncios) {
@@ -19,6 +20,9 @@ export default function AnnouncementFeed({
   const [anuncios, setAnuncios] = useState(initialAnnouncements);
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState(null);
+  const [borrando, setBorrando] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorBorrado, setErrorBorrado] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -76,23 +80,24 @@ export default function AnnouncementFeed({
     setModalAbierto(false);
   }
 
-  async function borrar(anuncio) {
-    if (!window.confirm(`¿Eliminar el anuncio “${anuncio.titulo}”?`)) return;
-
+  async function confirmarBorrado() {
+    setEliminando(true);
     const supabase = createClient();
     const { error } = await supabase
       .from("anuncios")
       .delete()
-      .eq("id", anuncio.id);
+      .eq("id", borrando.id);
+    setEliminando(false);
 
     if (error) {
-      window.alert("No se pudo eliminar el anuncio.");
+      setErrorBorrado("No se pudo eliminar el anuncio.");
       return;
     }
 
     setAnuncios((actuales) =>
-      actuales.filter((actual) => actual.id !== anuncio.id),
+      actuales.filter((actual) => actual.id !== borrando.id),
     );
+    setBorrando(null);
   }
 
   return (
@@ -109,7 +114,7 @@ export default function AnnouncementFeed({
         </div>
         {esAdmin && (
           <button
-            className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+            className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
             type="button"
             onClick={abrirNuevo}
           >
@@ -161,7 +166,10 @@ export default function AnnouncementFeed({
                   <button
                     className="text-sm font-medium text-red-600 hover:underline"
                     type="button"
-                    onClick={() => borrar(anuncio)}
+                    onClick={() => {
+                      setErrorBorrado("");
+                      setBorrando(anuncio);
+                    }}
                   >
                     Eliminar
                   </button>
@@ -188,6 +196,16 @@ export default function AnnouncementFeed({
           onSaved={guardarLocal}
         />
       </Modal>
+
+      <ConfirmDialog
+        abierto={borrando !== null}
+        titulo="Eliminar anuncio"
+        mensaje={`¿Eliminar el anuncio "${borrando?.titulo}"? Esta acción no se puede deshacer.`}
+        cargando={eliminando}
+        error={errorBorrado}
+        onConfirm={confirmarBorrado}
+        onCancel={() => setBorrando(null)}
+      />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import ContentDashboard from "@/components/ContentDashboard";
+import VocabularyDashboard from "@/components/VocabularyDashboard";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function VocabularioPage() {
@@ -7,20 +7,48 @@ export default async function VocabularioPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: perfil }, { data: contenidos }] = await Promise.all([
-    supabase.from("usuarios").select("rol").eq("id", user.id).single(),
+  const { data: perfil } = await supabase
+    .from("usuarios")
+    .select("rol, nivel")
+    .eq("id", user.id)
+    .single();
+
+  const esAdmin = perfil?.rol === "admin";
+  const consultas = [
     supabase
-      .from("contenido_didactico")
+      .from(
+        esAdmin
+          ? "lecciones_vocabulario"
+          : "lecciones_vocabulario_alumno",
+      )
+      .select("*")
+      .order("creado_en", { ascending: false }),
+    supabase
+      .from(esAdmin ? "contenido_didactico" : "contenido_didactico_alumno")
       .select("*")
       .in("tipo", ["vocabulario", "verbo"])
       .order("creado_en", { ascending: false }),
-  ]);
+  ];
+
+  if (!esAdmin) {
+    consultas.push(
+      supabase
+        .from("lecciones_vocabulario_progreso")
+        .select("leccion_id, puntuacion, total, intentos, completado_en")
+        .eq("estudiante_id", user.id),
+    );
+  }
+
+  const [leccionesResult, contenidosResult, progresosResult] =
+    await Promise.all(consultas);
 
   return (
-    <ContentDashboard
-      contenidos={contenidos ?? []}
-      tipoPagina="vocabulario"
-      esAdmin={perfil?.rol === "admin"}
+    <VocabularyDashboard
+      lecciones={leccionesResult.data ?? []}
+      contenidos={contenidosResult.data ?? []}
+      progresos={progresosResult?.data ?? []}
+      esAdmin={esAdmin}
+      nivelUsuario={perfil?.nivel}
     />
   );
 }

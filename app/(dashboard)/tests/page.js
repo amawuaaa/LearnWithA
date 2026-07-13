@@ -7,19 +7,33 @@ export default async function TestsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: perfil }, { data: tests }] = await Promise.all([
-    supabase.from("usuarios").select("rol").eq("id", user.id).single(),
-    supabase.from("tests").select("*").order("creado_en", { ascending: false }),
-  ]);
+  const { data: perfil } = await supabase
+    .from("usuarios")
+    .select("rol, nivel")
+    .eq("id", user.id)
+    .single();
 
   const esAdmin = perfil?.rol === "admin";
+
+  // El admin necesita respuesta_correcta para editar; los alumnos leen la
+  // vista tests_alumno, que no expone las respuestas correctas.
+  const { data: tests } = esAdmin
+    ? await supabase
+        .from("tests")
+        .select("*")
+        .order("creado_en", { ascending: false })
+    : await supabase
+        .from("tests_alumno")
+        .select("*")
+        .order("creado_en", { ascending: false });
+
   let resultados = [];
 
   if (esAdmin) {
     const { data } = await supabase
       .from("estudiantes_progreso")
       .select(
-        "id, puntuacion, completado_en, usuarios(nombre), tests(titulo, preguntas)",
+        "id, puntuacion, intentos, completado_en, usuarios(nombre), tests(titulo, preguntas)",
       )
       .order("completado_en", { ascending: false });
     resultados = data ?? [];
@@ -29,7 +43,7 @@ export default async function TestsPage() {
     <TestsDashboard
       tests={tests ?? []}
       esAdmin={esAdmin}
-      estudianteId={user.id}
+      nivelUsuario={perfil?.nivel}
       resultados={resultados}
     />
   );
