@@ -72,4 +72,33 @@ pnpm verify:migrations
 pnpm build
 ```
 
+## Aplicar migración 027 (privacidad de perfiles)
+
+1. Añade `SUPABASE_DB_URL` a `.env.local` (cadena de conexión de Supabase → Settings → Database).
+2. Ejecuta:
+
+```bash
+pnpm db:migrate:027
+pnpm db:verify:migration
+```
+
+## Tests E2E (Playwright)
+
+1. Crea `.env.e2e.local` con credenciales de un alumno de prueba:
+
+```env
+E2E_STUDENT_EMAIL=alumno@ejemplo.com
+E2E_STUDENT_PASSWORD=contraseña-segura
+```
+
+2. Instala el navegador y ejecuta:
+
+```bash
+pnpm install
+pnpm exec playwright install chromium
+pnpm test:e2e
+```
+
+Los tests de login, chat y mini-tests se omiten automáticamente si faltan credenciales.
+
 La CI en GitHub Actions ejecuta las mismas comprobaciones en cada push a `main`.
