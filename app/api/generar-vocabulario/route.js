@@ -1,5 +1,5 @@
 import { generarJsonConGemini } from "@/lib/gemini";
-import { getPerfilActual } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { consumirCupoIa, respuestaLimiteIa } from "@/lib/limiteIa";
 import { createClient } from "@/lib/supabase/server";
 import { limpiarPalabras, palabrasValidas } from "@/lib/vocabulario";
@@ -70,15 +70,8 @@ function normalizarLeccion(leccion, cantidad) {
 }
 
 export async function POST(request) {
-  const { user, perfil } = await getPerfilActual();
-
-  if (!user) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 401 });
-  }
-
-  if (perfil.rol !== "admin") {
-    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
-  }
+  const auth = await requireAdmin();
+  if (!auth.ok) return auth.response;
 
   const supabase = await createClient();
 

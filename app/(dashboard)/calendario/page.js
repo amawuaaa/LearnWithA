@@ -1,6 +1,7 @@
 import CalendarioDashboard from "@/components/CalendarioDashboard";
+import { cargarDatosCalendario } from "@/lib/calendario/consultas";
 import { getPerfilActual } from "@/lib/auth";
-import { formatearFechaLocal } from "@/lib/horario";
+import { claveMes } from "@/lib/horario";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function CalendarioPage() {
@@ -8,27 +9,13 @@ export default async function CalendarioPage() {
   const supabase = await createClient();
   const esAdmin = perfil.rol === "admin";
   const hoy = new Date();
-  const desde = new Date(hoy);
-  desde.setDate(desde.getDate() - 30);
-  const hasta = new Date(hoy);
-  hasta.setDate(hasta.getDate() + 365);
-  const desdeStr = formatearFechaLocal(desde);
-  const hastaStr = formatearFechaLocal(hasta);
+  const mesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
 
   const consultas = [
-    supabase
-      .from("clases_estudiante")
-      .select(
-        "*, estudiante:usuarios!clases_estudiante_estudiante_id_fkey(nombre)",
-      )
-      .gte("fecha", desdeStr)
-      .lte("fecha", hastaStr)
-      .order("fecha", { ascending: true })
-      .order("hora", { ascending: true }),
-    supabase
-      .from("eventos_calendario")
-      .select("*")
-      .order("fecha", { ascending: true }),
+    cargarDatosCalendario(supabase, mesActual.getFullYear(), mesActual.getMonth(), {
+      esAdmin,
+      usuarioId: user.id,
+    }),
   ];
 
   if (esAdmin) {
@@ -42,9 +29,8 @@ export default async function CalendarioPage() {
   }
 
   const resultados = await Promise.all(consultas);
-  const clases = resultados[0].data ?? [];
-  const eventos = resultados[1].data ?? [];
-  const estudiantes = esAdmin ? (resultados[2]?.data ?? []) : [];
+  const { clases, eventos } = resultados[0];
+  const estudiantes = esAdmin ? (resultados[1]?.data ?? []) : [];
 
   return (
     <CalendarioDashboard
@@ -53,6 +39,7 @@ export default async function CalendarioPage() {
       eventosIniciales={eventos}
       estudiantes={estudiantes}
       usuarioId={user.id}
+      mesInicial={claveMes(mesActual)}
     />
   );
 }

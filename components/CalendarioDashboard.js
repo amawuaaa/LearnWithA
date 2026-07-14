@@ -6,13 +6,19 @@ import AdminGenerarClasesForm from "./AdminGenerarClasesForm";
 import {
   NOMBRES_DIAS_CORTOS,
   clasesPorFecha,
+  claveMes,
   fechasConClase,
   formatearFechaLocal,
   formatearHora,
   generarGrillaMes,
 } from "@/lib/horario";
+import {
+  cargarDatosCalendario,
+  fusionarClases,
+  fusionarEventos,
+} from "@/lib/calendario/consultas";
 import { createClient } from "@/lib/supabase/client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./Modal";
 
 const NOMBRES_MESES = [
@@ -49,6 +55,7 @@ export default function CalendarioDashboard({
   eventosIniciales,
   estudiantes,
   usuarioId,
+  mesInicial,
 }) {
   const [clases, setClases] = useState(clasesIniciales);
   const [eventos, setEventos] = useState(eventosIniciales);
@@ -62,12 +69,57 @@ export default function CalendarioDashboard({
   const [descripcionEvento, setDescripcionEvento] = useState("");
   const [guardandoClase, setGuardandoClase] = useState(false);
   const [guardandoEvento, setGuardandoEvento] = useState(false);
+  const [cargandoMes, setCargandoMes] = useState(false);
   const [error, setError] = useState("");
+  const mesesCargadosRef = useRef(new Set([mesInicial]));
 
   const hoy = useMemo(() => new Date(), []);
   const [mesVisible, setMesVisible] = useState(
     () => new Date(hoy.getFullYear(), hoy.getMonth(), 1),
   );
+
+  useEffect(() => {
+    const clave = claveMes(mesVisible);
+    if (mesesCargadosRef.current.has(clave)) return undefined;
+
+    let cancelado = false;
+
+    async function cargarMes() {
+      setCargandoMes(true);
+      const supabase = createClient();
+      const resultado = await cargarDatosCalendario(
+        supabase,
+        mesVisible.getFullYear(),
+        mesVisible.getMonth(),
+        { esAdmin, usuarioId },
+      );
+
+      if (cancelado) return;
+
+      setCargandoMes(false);
+
+      if (resultado.error) {
+        setError("No se pudieron cargar los datos del mes.");
+        return;
+      }
+
+      setClases((actuales) => fusionarClases(actuales, resultado.clases));
+      setEventos((actuales) => fusionarEventos(actuales, resultado.eventos));
+      mesesCargadosRef.current.add(clave);
+    }
+
+    cargarMes();
+
+    return () => {
+      cancelado = true;
+      setCargandoMes(false);
+    };
+  }, [mesVisible, esAdmin, usuarioId]);
+
+  function actualizarClases(nuevasClases) {
+    setClases((actuales) => fusionarClases(actuales, nuevasClases));
+    mesesCargadosRef.current.add(claveMes(mesVisible));
+  }
 
   const clasesVisibles = useMemo(() => {
     if (esAdmin) return clases;
@@ -281,7 +333,7 @@ export default function CalendarioDashboard({
       {esAdmin && (
         <AdminGenerarClasesForm
           estudiantes={estudiantes}
-          onGeneradas={setClases}
+          onGeneradas={actualizarClases}
         />
       )}
 
@@ -303,6 +355,11 @@ export default function CalendarioDashboard({
             </button>
             <h2 className="min-w-0 text-center font-semibold text-slate-900">
               {NOMBRES_MESES[mesVisible.getMonth()]} {mesVisible.getFullYear()}
+              {cargandoMes && (
+                <span className="ml-2 text-xs font-normal text-slate-400">
+                  Cargando…
+                </span>
+              )}
             </h2>
             <button
               type="button"

@@ -7,12 +7,9 @@ import {
   mensajeExitoGeneracionClases,
   normalizarResultadoGeneracion,
 } from "@/lib/clases";
-import { formatearFechaLocal } from "@/lib/horario";
+import { cargarDatosCalendario } from "@/lib/calendario/consultas";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
-
-const SELECT_CLASES =
-  "*, estudiante:usuarios!clases_estudiante_estudiante_id_fkey(nombre)";
 
 export default function AdminGenerarClasesForm({ estudiantes, onGeneradas }) {
   const [error, setError] = useState("");
@@ -61,32 +58,27 @@ export default function AdminGenerarClasesForm({ estudiantes, onGeneradas }) {
       return;
     }
 
-    const hoy = new Date();
-    const desde = new Date(hoy);
-    desde.setDate(desde.getDate() - 30);
-    const hasta = new Date(hoy);
-    hasta.setDate(hasta.getDate() + 365);
-
-    const { data: clasesActualizadas, error: fetchError } = await supabase
-      .from("clases_estudiante")
-      .select(SELECT_CLASES)
-      .gte("fecha", formatearFechaLocal(desde))
-      .lte("fecha", formatearFechaLocal(hasta))
-      .order("fecha", { ascending: true })
-      .order("hora", { ascending: true });
+    const [anio, mesNumero] = mes.split("-").map(Number);
+    const { clases: clasesActualizadas, error: fetchError } =
+      await cargarDatosCalendario(supabase, anio, mesNumero - 1, {
+        esAdmin: true,
+        usuarioId: null,
+      });
 
     setGenerando(false);
 
     if (fetchError) {
-      setExito(mensajeExitoGeneracionClases({
-        creadas: resultado.creadas ?? 0,
-        omitidas: resultado.omitidas ?? 0,
-        sinPlantilla: resultado.sin_plantilla ?? 0,
-      }));
+      setExito(
+        mensajeExitoGeneracionClases({
+          creadas: resultado.creadas ?? 0,
+          omitidas: resultado.omitidas ?? 0,
+          sinPlantilla: resultado.sin_plantilla ?? 0,
+        }),
+      );
       return;
     }
 
-    onGeneradas(clasesActualizadas ?? []);
+    onGeneradas(clasesActualizadas);
     setExito(
       mensajeExitoGeneracionClases({
         creadas: resultado.creadas ?? 0,
