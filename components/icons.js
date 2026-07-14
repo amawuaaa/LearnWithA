@@ -76,6 +76,17 @@ export function IconVocabulario({ className = "h-5 w-5" }) {
   );
 }
 
+export function IconProgreso({ className = "h-5 w-5" }) {
+  return (
+    <svg className={className} {...base}>
+      <path d="M4 4v16h16" />
+      <line x1="8" y1="16" x2="8" y2="11" />
+      <line x1="12" y1="16" x2="12" y2="7" />
+      <line x1="16" y1="16" x2="16" y2="13" />
+    </svg>
+  );
+}
+
 export function IconPerfil({ className = "h-5 w-5" }) {
   return (
     <svg className={className} {...base}>

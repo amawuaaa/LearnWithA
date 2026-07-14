@@ -11,6 +11,7 @@ import {
   IconInicio,
   IconMemoria,
   IconMensajes,
+  IconProgreso,
   IconTests,
   IconVocabulario,
 } from "./icons";
@@ -23,6 +24,12 @@ const enlaces = [
   { href: "/tests", etiqueta: "Tests", Icono: IconTests },
   { href: "/memoria", etiqueta: "Memoria", Icono: IconMemoria },
   { href: "/vocabulario", etiqueta: "Vocabulario", Icono: IconVocabulario },
+  {
+    href: "/progreso",
+    etiqueta: "Progreso",
+    Icono: IconProgreso,
+    soloAdmin: true,
+  },
 ];
 
 export default function Sidebar({ perfil, mensajesNoLeidos = 0 }) {
@@ -83,7 +90,9 @@ export default function Sidebar({ perfil, mensajesNoLeidos = 0 }) {
       </div>
 
       <nav className="flex-1 space-y-1 p-3" aria-label="Navegación principal">
-        {enlaces.map((enlace) => {
+        {enlaces
+          .filter((enlace) => !enlace.soloAdmin || perfil.rol === "admin")
+          .map((enlace) => {
           const activo =
             enlace.href === "/"
               ? pathname === "/"
