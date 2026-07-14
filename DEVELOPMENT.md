@@ -101,4 +101,17 @@ pnpm test:e2e
 
 Los tests de login, chat y mini-tests se omiten automáticamente si faltan credenciales.
 
+### Secrets en GitHub Actions (CI completa)
+
+En el repo → **Settings → Secrets and variables → Actions**, añade:
+
+| Secret | Valor |
+|--------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL de tu proyecto (igual que en `.env.local`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave anon/publica de Supabase |
+| `E2E_STUDENT_EMAIL` | Email del alumno de prueba |
+| `E2E_STUDENT_PASSWORD` | Contraseña del alumno de prueba |
+
+Sin los cuatro, la CI sigue pasando lint/tests/build pero **omite** los E2E.
+
 La CI en GitHub Actions ejecuta las mismas comprobaciones en cada push a `main`.
