@@ -1,4 +1,5 @@
 import CalendarioDashboard from "@/components/CalendarioDashboard";
+import { formatearFechaLocal } from "@/lib/horario";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function CalendarioPage() {
@@ -7,30 +8,59 @@ export default async function CalendarioPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: perfil }, { data: horario }, { data: canceladas }, { data: eventos }] =
-    await Promise.all([
-      supabase.from("usuarios").select("rol").eq("id", user.id).single(),
+  const { data: perfil } = await supabase
+    .from("usuarios")
+    .select("rol")
+    .eq("id", user.id)
+    .single();
+
+  const esAdmin = perfil?.rol === "admin";
+  const hoy = new Date();
+  const desde = new Date(hoy);
+  desde.setDate(desde.getDate() - 30);
+  const hasta = new Date(hoy);
+  hasta.setDate(hasta.getDate() + 365);
+  const desdeStr = formatearFechaLocal(desde);
+  const hastaStr = formatearFechaLocal(hasta);
+
+  const consultas = [
+    supabase
+      .from("clases_estudiante")
+      .select(
+        "*, estudiante:usuarios!clases_estudiante_estudiante_id_fkey(nombre)",
+      )
+      .gte("fecha", desdeStr)
+      .lte("fecha", hastaStr)
+      .order("fecha", { ascending: true })
+      .order("hora", { ascending: true }),
+    supabase
+      .from("eventos_calendario")
+      .select("*")
+      .order("fecha", { ascending: true }),
+  ];
+
+  if (esAdmin) {
+    consultas.push(
       supabase
-        .from("horario_clases")
-        .select("*")
-        .order("dia_semana", { ascending: true })
-        .order("hora", { ascending: true }),
-      supabase
-        .from("clases_canceladas")
-        .select("*")
-        .order("fecha", { ascending: true }),
-      supabase
-        .from("eventos_calendario")
-        .select("*")
-        .order("fecha", { ascending: true }),
-    ]);
+        .from("usuarios")
+        .select("id, nombre")
+        .eq("rol", "estudiante")
+        .order("nombre", { ascending: true }),
+    );
+  }
+
+  const resultados = await Promise.all(consultas);
+  const clases = resultados[0].data ?? [];
+  const eventos = resultados[1].data ?? [];
+  const estudiantes = esAdmin ? (resultados[2]?.data ?? []) : [];
 
   return (
     <CalendarioDashboard
-      esAdmin={perfil?.rol === "admin"}
-      horarioInicial={horario ?? []}
-      canceladasIniciales={canceladas ?? []}
-      eventosIniciales={eventos ?? []}
+      esAdmin={esAdmin}
+      clasesIniciales={clases}
+      eventosIniciales={eventos}
+      estudiantes={estudiantes}
+      usuarioId={user.id}
     />
   );
 }

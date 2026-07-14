@@ -1,5 +1,9 @@
 import HomeDashboard from "@/components/HomeDashboard";
-import { formatearHora, proximaClase } from "@/lib/horario";
+import {
+  formatearFechaLocal,
+  formatearHora,
+  proximaClaseEstudiante,
+} from "@/lib/horario";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function InicioPage() {
@@ -15,6 +19,21 @@ export default async function InicioPage() {
     .single();
 
   const esAdmin = perfil?.rol === "admin";
+  const hoyStr = formatearFechaLocal(new Date());
+
+  let consultaClases = supabase
+    .from("clases_estudiante")
+    .select(
+      "fecha, hora, cancelada, estudiante:usuarios!clases_estudiante_estudiante_id_fkey(nombre)",
+    )
+    .eq("cancelada", false)
+    .gte("fecha", hoyStr)
+    .order("fecha", { ascending: true })
+    .order("hora", { ascending: true });
+
+  if (!esAdmin) {
+    consultaClases = consultaClases.eq("estudiante_id", user.id);
+  }
 
   const anunciosPromise = supabase
     .from("anuncios")
@@ -22,24 +41,8 @@ export default async function InicioPage() {
     .order("creado_en", { ascending: false })
     .limit(3);
 
-  const [{ data: horario }, { data: canceladas }] = await Promise.all([
-    supabase
-      .from("horario_clases")
-      .select("dia_semana, hora")
-      .order("hora", { ascending: true }),
-    supabase.from("clases_canceladas").select("fecha"),
-  ]);
-
-  const proxima = proximaClase({
-    diasSemana: new Set((horario ?? []).map((h) => h.dia_semana)),
-    canceladas: new Set((canceladas ?? []).map((c) => c.fecha)),
-  });
-
-  const horasProxima = proxima
-    ? (horario ?? [])
-        .filter((slot) => slot.dia_semana === proxima.fecha.getDay())
-        .map((slot) => formatearHora(slot.hora))
-    : [];
+  const { data: clasesFuturas } = await consultaClases;
+  const proxima = proximaClaseEstudiante(clasesFuturas ?? []);
 
   const proximaClaseInfo = proxima
     ? {
@@ -49,7 +52,11 @@ export default async function InicioPage() {
           day: "numeric",
           month: "long",
         }),
-        horas: horasProxima,
+        horas: proxima.clases.map((clase) =>
+          esAdmin
+            ? `${formatearHora(clase.hora)} · ${clase.estudiante?.nombre ?? "Alumno"}`
+            : formatearHora(clase.hora),
+        ),
       }
     : null;
 

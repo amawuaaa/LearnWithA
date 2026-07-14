@@ -1,13 +1,14 @@
 "use client";
 
+import Button from "@/components/ui/Button";
+import PageHeader from "@/components/ui/PageHeader";
 import {
-  NOMBRES_DIAS,
   NOMBRES_DIAS_CORTOS,
-  diasConClase,
+  clasesPorFecha,
+  fechasConClase,
   formatearFechaLocal,
   formatearHora,
   generarGrillaMes,
-  slotsPorDia,
 } from "@/lib/horario";
 import { createClient } from "@/lib/supabase/client";
 import { useMemo, useState } from "react";
@@ -43,21 +44,22 @@ function fechaLarga(fechaStr) {
 
 export default function CalendarioDashboard({
   esAdmin,
-  horarioInicial,
-  canceladasIniciales,
+  clasesIniciales,
   eventosIniciales,
+  estudiantes,
+  usuarioId,
 }) {
-  const [horario, setHorario] = useState(horarioInicial);
-  const [canceladas, setCanceladas] = useState(canceladasIniciales);
+  const [clases, setClases] = useState(clasesIniciales);
   const [eventos, setEventos] = useState(eventosIniciales);
-  const [guardandoSlot, setGuardandoSlot] = useState(null);
-  const [modalCancelar, setModalCancelar] = useState(null);
-  const [motivo, setMotivo] = useState("");
-  const [guardandoCancelacion, setGuardandoCancelacion] = useState(false);
   const [diaSeleccionado, setDiaSeleccionado] = useState(null);
+  const [estudianteNuevo, setEstudianteNuevo] = useState(
+    estudiantes[0]?.id ?? "",
+  );
+  const [horaNueva, setHoraNueva] = useState("18:00");
   const [tipoEvento, setTipoEvento] = useState("anuncio");
   const [tituloEvento, setTituloEvento] = useState("");
   const [descripcionEvento, setDescripcionEvento] = useState("");
+  const [guardandoClase, setGuardandoClase] = useState(false);
   const [guardandoEvento, setGuardandoEvento] = useState(false);
   const [error, setError] = useState("");
 
@@ -66,11 +68,16 @@ export default function CalendarioDashboard({
     () => new Date(hoy.getFullYear(), hoy.getMonth(), 1),
   );
 
-  const diasSemanaSet = useMemo(() => diasConClase(horario), [horario]);
-  const canceladaPorFecha = useMemo(
-    () => Object.fromEntries(canceladas.map((c) => [c.fecha, c])),
-    [canceladas],
+  const clasesVisibles = useMemo(() => {
+    if (esAdmin) return clases;
+    return clases.filter((clase) => clase.estudiante_id === usuarioId);
+  }, [clases, esAdmin, usuarioId]);
+
+  const fechasClaseSet = useMemo(
+    () => fechasConClase(clasesVisibles),
+    [clasesVisibles],
   );
+
   const eventosPorFecha = useMemo(() => {
     const mapa = {};
     for (const evento of eventos) {
@@ -78,24 +85,21 @@ export default function CalendarioDashboard({
     }
     return mapa;
   }, [eventos]);
+
   const grilla = useMemo(
     () => generarGrillaMes(mesVisible.getFullYear(), mesVisible.getMonth()),
     [mesVisible],
   );
+
   const hoyStr = formatearFechaLocal(hoy);
-
-  const proximasCancelaciones = canceladas
-    .filter((c) => c.fecha >= hoyStr)
-    .sort((a, b) => a.fecha.localeCompare(b.fecha));
-
   const diaSeleccionadoStr = diaSeleccionado
     ? formatearFechaLocal(diaSeleccionado)
     : null;
+  const clasesDiaSeleccionado = diaSeleccionadoStr
+    ? clasesPorFecha(clasesVisibles, diaSeleccionadoStr)
+    : [];
   const eventosDiaSeleccionado = diaSeleccionadoStr
     ? (eventosPorFecha[diaSeleccionadoStr] ?? [])
-    : [];
-  const slotsDiaSeleccionado = diaSeleccionado
-    ? slotsPorDia(horario, diaSeleccionado.getDay())
     : [];
 
   function cambiarMes(delta) {
@@ -108,144 +112,110 @@ export default function CalendarioDashboard({
     setMesVisible(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
   }
 
-  async function anadirSlot(diaSemana) {
+  function abrirDia(fecha) {
     setError("");
-    setGuardandoSlot(`${diaSemana}-nuevo`);
+    setDiaSeleccionado(fecha);
+    setEstudianteNuevo(estudiantes[0]?.id ?? "");
+    setHoraNueva("18:00");
+  }
+
+  async function anadirClase(event) {
+    event.preventDefault();
+    if (!diaSeleccionadoStr || !estudianteNuevo || !horaNueva) return;
+
+    setGuardandoClase(true);
+    setError("");
     const supabase = createClient();
     const { data, error: insertError } = await supabase
-      .from("horario_clases")
-      .insert({ dia_semana: diaSemana, hora: "18:00" })
-      .select()
+      .from("clases_estudiante")
+      .insert({
+        estudiante_id: estudianteNuevo,
+        fecha: diaSeleccionadoStr,
+        hora: horaNueva,
+      })
+      .select(
+        "*, estudiante:usuarios!clases_estudiante_estudiante_id_fkey(nombre)",
+      )
       .single();
-    setGuardandoSlot(null);
+    setGuardandoClase(false);
 
-    if (insertError || !data) {
+    if (insertError) {
       setError(
-        insertError?.code === "23505"
-          ? "Ya existe una clase a esa hora en ese día."
-          : "No se pudo añadir la hora.",
+        insertError.code === "23505"
+          ? "Ese alumno ya tiene clase a esa hora ese día."
+          : "No se pudo programar la clase.",
       );
       return;
     }
-    setHorario((actuales) => [...actuales, data]);
+
+    setClases((actuales) =>
+      [...actuales, data].sort(
+        (a, b) =>
+          a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora),
+      ),
+    );
   }
 
-  async function eliminarSlot(id) {
+  async function cancelarClase(clase, restaurar = false) {
     setError("");
     const supabase = createClient();
-    const { error: deleteError } = await supabase
-      .from("horario_clases")
-      .delete()
-      .eq("id", id);
-
-    if (deleteError) {
-      setError("No se pudo eliminar la hora.");
-      return;
-    }
-    setHorario((actuales) => actuales.filter((slot) => slot.id !== id));
-  }
-
-  async function actualizarHoraSlot(id, hora) {
-    if (!hora) return;
-
-    const supabase = createClient();
     const { data, error: updateError } = await supabase
-      .from("horario_clases")
-      .update({ hora })
-      .eq("id", id)
-      .select()
+      .from("clases_estudiante")
+      .update({
+        cancelada: !restaurar,
+        motivo_cancelacion: restaurar ? null : clase.motivo_cancelacion ?? null,
+      })
+      .eq("id", clase.id)
+      .select(
+        "*, estudiante:usuarios!clases_estudiante_estudiante_id_fkey(nombre)",
+      )
       .single();
 
     if (updateError || !data) {
       setError(
-        updateError?.code === "23505"
-          ? "Ya hay otra clase a esa hora."
-          : "No se pudo actualizar la hora.",
+        restaurar
+          ? "No se pudo restaurar la clase."
+          : "No se pudo cancelar la clase.",
       );
       return;
     }
-    setHorario((actuales) =>
-      actuales.map((slot) => (slot.id === data.id ? data : slot)),
+
+    setClases((actuales) =>
+      actuales.map((actual) => (actual.id === data.id ? data : actual)),
     );
   }
 
-  function abrirDia(fecha) {
+  async function eliminarClase(id) {
     setError("");
-    setTipoEvento("anuncio");
-    setTituloEvento("");
-    setDescripcionEvento("");
-    setDiaSeleccionado(fecha);
-  }
-
-  function abrirCancelar(fecha) {
-    setError("");
-    setMotivo("");
-    setModalCancelar(fecha);
-    setDiaSeleccionado(null);
-  }
-
-  async function confirmarCancelar() {
-    setGuardandoCancelacion(true);
-    const supabase = createClient();
-    const { data, error: insertError } = await supabase
-      .from("clases_canceladas")
-      .insert({
-        fecha: formatearFechaLocal(modalCancelar),
-        motivo: motivo.trim() || null,
-      })
-      .select()
-      .single();
-    setGuardandoCancelacion(false);
-
-    if (insertError || !data) {
-      setError("No se pudo cancelar la clase.");
-      return;
-    }
-    setCanceladas((actuales) => [...actuales, data]);
-    setModalCancelar(null);
-  }
-
-  async function restaurarClase(fechaStr) {
-    const existente = canceladaPorFecha[fechaStr];
-    if (!existente) return;
-
     const supabase = createClient();
     const { error: deleteError } = await supabase
-      .from("clases_canceladas")
+      .from("clases_estudiante")
       .delete()
-      .eq("id", existente.id);
+      .eq("id", id);
 
     if (deleteError) {
-      setError("No se pudo restaurar la clase.");
+      setError("No se pudo eliminar la clase.");
       return;
     }
-    setCanceladas((actuales) => actuales.filter((c) => c.id !== existente.id));
+
+    setClases((actuales) => actuales.filter((clase) => clase.id !== id));
   }
 
   async function crearEvento(event) {
     event.preventDefault();
-    if (!diaSeleccionadoStr) return;
-
-    const titulo = tituloEvento.trim();
-    if (!titulo) {
-      setError("Escribe un título para el evento.");
-      return;
-    }
+    if (!diaSeleccionadoStr || !tituloEvento.trim()) return;
 
     setGuardandoEvento(true);
     setError("");
     const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
     const { data, error: insertError } = await supabase
       .from("eventos_calendario")
       .insert({
         fecha: diaSeleccionadoStr,
         tipo: tipoEvento,
-        titulo,
+        titulo: tituloEvento.trim(),
         descripcion: descripcionEvento.trim() || null,
-        creado_por: user.id,
+        creado_por: usuarioId,
       })
       .select()
       .single();
@@ -255,6 +225,7 @@ export default function CalendarioDashboard({
       setError("No se pudo crear el evento.");
       return;
     }
+
     setEventos((actuales) => [...actuales, data]);
     setTituloEvento("");
     setDescripcionEvento("");
@@ -271,93 +242,45 @@ export default function CalendarioDashboard({
       setError("No se pudo eliminar el evento.");
       return;
     }
+
     setEventos((actuales) => actuales.filter((evento) => evento.id !== id));
+  }
+
+  function etiquetaClaseCelda(clasesDia) {
+    const activas = clasesDia.filter((clase) => !clase.cancelada);
+    if (activas.length === 0) {
+      const canceladas = clasesDia.length;
+      return canceladas > 0 ? `${canceladas} cancel.` : null;
+    }
+
+    if (esAdmin) {
+      return activas.length === 1
+        ? `${formatearHora(activas[0].hora)} · 1`
+        : `${activas.length} clases`;
+    }
+
+    return activas
+      .slice(0, 2)
+      .map((clase) => formatearHora(clase.hora))
+      .join(", ");
   }
 
   return (
     <>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-accent">Horario</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
-          Calendario
-        </h1>
-        <p className="mt-2 text-slate-500">
-          {esAdmin
-            ? "Configura varias horas por día, marca cancelaciones y añade exámenes o avisos."
-            : "Consulta tus clases, exámenes y avisos del mes."}
-        </p>
-      </div>
+      <PageHeader
+        etiqueta="Horario"
+        titulo="Calendario"
+        descripcion={
+          esAdmin
+            ? "Programa clases por día, hora y alumno. Añade exámenes o avisos cuando lo necesites."
+            : "Consulta tus clases, exámenes y avisos del mes."
+        }
+      />
 
       {error && (
         <p className="mb-4 text-sm text-red-700" role="alert">
           {error}
         </p>
-      )}
-
-      {esAdmin && (
-        <section className="mb-8 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-1 font-semibold text-slate-900">
-            Horario semanal
-          </h2>
-          <p className="mb-4 text-sm text-slate-500">
-            Añade tantas horas como necesites en cada día de la semana.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {NOMBRES_DIAS.map((nombre, dia) => {
-              const slots = slotsPorDia(horario, dia);
-
-              return (
-                <div
-                  key={dia}
-                  className="rounded-xl border border-slate-200 bg-slate-50/60 p-3"
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-slate-800">
-                      {nombre}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={guardandoSlot === `${dia}-nuevo`}
-                      onClick={() => anadirSlot(dia)}
-                      className="rounded-md bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-60"
-                    >
-                      + Hora
-                    </button>
-                  </div>
-                  {slots.length === 0 ? (
-                    <p className="text-xs text-slate-400">Sin clase</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {slots.map((slot) => (
-                        <div
-                          key={slot.id}
-                          className="flex items-center gap-2 rounded-lg border border-accent/20 bg-accent-muted/50 px-2 py-1.5"
-                        >
-                          <input
-                            type="time"
-                            className="flex-1 rounded border border-slate-300 bg-white px-1.5 py-1 text-xs outline-none focus:border-accent"
-                            value={formatearHora(slot.hora)}
-                            onChange={(event) =>
-                              actualizarHoraSlot(slot.id, event.target.value)
-                            }
-                            aria-label={`Hora de clase los ${nombre}`}
-                          />
-                          <button
-                            type="button"
-                            className="text-xs font-medium text-red-600 hover:underline"
-                            onClick={() => eliminarSlot(slot.id)}
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
       )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -370,7 +293,7 @@ export default function CalendarioDashboard({
             >
               ‹
             </button>
-            <h2 className="min-w-40 text-center font-semibold text-slate-900">
+            <h2 className="min-w-0 text-center font-semibold text-slate-900">
               {NOMBRES_MESES[mesVisible.getMonth()]} {mesVisible.getFullYear()}
             </h2>
             <button
@@ -381,13 +304,9 @@ export default function CalendarioDashboard({
               ›
             </button>
           </div>
-          <button
-            type="button"
-            className="rounded-lg border border-accent/30 bg-accent-muted px-3 py-1.5 text-sm font-medium text-accent hover:bg-teal-100"
-            onClick={irAHoy}
-          >
+          <Button variante="secondary" type="button" onClick={irAHoy}>
             Hoy
-          </button>
+          </Button>
         </div>
 
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -401,59 +320,46 @@ export default function CalendarioDashboard({
         <div className="grid grid-cols-7 gap-1">
           {grilla.map(({ fecha, enMes }) => {
             const fechaStr = formatearFechaLocal(fecha);
-            const esDiaDeClase = diasSemanaSet.has(fecha.getDay());
-            const cancelacion = canceladaPorFecha[fechaStr];
+            const clasesDia = clasesPorFecha(clasesVisibles, fechaStr);
+            const clasesActivas = clasesDia.filter((clase) => !clase.cancelada);
             const eventosDia = eventosPorFecha[fechaStr] ?? [];
-            const slotsDia = slotsPorDia(horario, fecha.getDay());
+            const tieneClase = fechasClaseSet.has(fechaStr);
             const esHoy = fechaStr === hoyStr;
+            const etiqueta = etiquetaClaseCelda(clasesDia);
 
-            let clases =
+            let clasesCelda =
               "flex min-h-16 flex-col items-center justify-start gap-0.5 rounded-lg p-1 text-sm transition";
 
             if (!enMes) {
-              clases += " text-slate-300";
-            } else if (cancelacion) {
-              clases += " bg-red-50 text-red-700";
-            } else if (esDiaDeClase) {
-              clases += " bg-accent-muted font-semibold text-accent";
+              clasesCelda += " text-slate-300";
+            } else if (
+              clasesActivas.length === 0 &&
+              clasesDia.some((clase) => clase.cancelada)
+            ) {
+              clasesCelda += " bg-red-50 text-red-700";
+            } else if (tieneClase && clasesActivas.length > 0) {
+              clasesCelda += " bg-accent-muted font-semibold text-accent";
             } else if (eventosDia.length > 0) {
-              clases += " bg-slate-50 text-slate-700";
+              clasesCelda += " bg-slate-50 text-slate-700";
             } else {
-              clases += " text-slate-600 hover:bg-slate-50";
+              clasesCelda += " text-slate-600 hover:bg-slate-50";
             }
 
             if (esHoy) {
-              clases += " ring-2 ring-accent ring-offset-1";
+              clasesCelda += " ring-2 ring-accent ring-offset-1";
             }
 
             if (enMes) {
-              clases += " cursor-pointer hover:shadow-sm";
+              clasesCelda += " cursor-pointer hover:shadow-sm";
             }
 
             const contenido = (
               <>
                 <span className="font-semibold">{fecha.getDate()}</span>
-                {enMes && cancelacion && (
-                  <span className="text-[10px] font-medium text-red-600">
-                    Cancelada
+                {enMes && etiqueta && (
+                  <span className="line-clamp-2 w-full px-0.5 text-[9px] font-medium leading-tight">
+                    {etiqueta}
                   </span>
-                )}
-                {enMes && !cancelacion && esDiaDeClase && slotsDia.length > 0 && (
-                  <div className="flex w-full flex-col gap-0.5">
-                    {slotsDia.slice(0, 2).map((slot) => (
-                      <span
-                        key={slot.id}
-                        className="rounded bg-white/70 px-1 text-[9px] font-medium text-teal-800"
-                      >
-                        {formatearHora(slot.hora)}
-                      </span>
-                    ))}
-                    {slotsDia.length > 2 && (
-                      <span className="text-[9px] text-teal-700">
-                        +{slotsDia.length - 2}
-                      </span>
-                    )}
-                  </div>
                 )}
                 {enMes && eventosDia.length > 0 && (
                   <div className="mt-auto flex flex-wrap justify-center gap-0.5">
@@ -478,8 +384,7 @@ export default function CalendarioDashboard({
                 <button
                   key={fechaStr}
                   type="button"
-                  title={cancelacion?.motivo ?? undefined}
-                  className={clases}
+                  className={clasesCelda}
                   onClick={() => abrirDia(fecha)}
                 >
                   {contenido}
@@ -488,7 +393,7 @@ export default function CalendarioDashboard({
             }
 
             return (
-              <div key={fechaStr} className={clases}>
+              <div key={fechaStr} className={clasesCelda}>
                 {contenido}
               </div>
             );
@@ -497,11 +402,11 @@ export default function CalendarioDashboard({
 
         <div className="mt-4 flex flex-wrap gap-4 border-t border-slate-100 pt-4 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
-            <span className="h-3 w-3 rounded bg-accent-muted" /> Día de clase
+            <span className="h-3 w-3 rounded bg-accent-muted" /> Día con clase
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded bg-red-50 ring-1 ring-red-200" />{" "}
-            Cancelada
+            Solo cancelaciones
           </span>
           <span className="flex items-center gap-1.5">
             <span className="h-3 w-3 rounded-full bg-amber-500" /> Examen
@@ -512,40 +417,6 @@ export default function CalendarioDashboard({
           <span className="text-slate-400">Pulsa un día para ver el detalle</span>
         </div>
       </section>
-
-      {esAdmin && proximasCancelaciones.length > 0 && (
-        <section className="mt-8">
-          <h2 className="mb-4 text-xl font-semibold text-slate-900">
-            Próximas cancelaciones
-          </h2>
-          <div className="space-y-3">
-            {proximasCancelaciones.map((cancelacion) => (
-              <div
-                key={cancelacion.id}
-                className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4"
-              >
-                <div>
-                  <p className="font-medium capitalize text-slate-900">
-                    {fechaLarga(cancelacion.fecha)}
-                  </p>
-                  {cancelacion.motivo && (
-                    <p className="mt-0.5 text-sm text-slate-500">
-                      {cancelacion.motivo}
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  className="shrink-0 text-sm font-medium text-accent hover:underline"
-                  onClick={() => restaurarClase(cancelacion.fecha)}
-                >
-                  Quitar
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       <Modal
         abierto={diaSeleccionado !== null}
@@ -560,55 +431,118 @@ export default function CalendarioDashboard({
           <div className="space-y-5">
             <section>
               <h3 className="text-sm font-semibold text-slate-900">Clases</h3>
-              {canceladaPorFecha[diaSeleccionadoStr] ? (
-                <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  <p className="font-medium">Clase cancelada</p>
-                  {canceladaPorFecha[diaSeleccionadoStr].motivo && (
-                    <p className="mt-1">
-                      {canceladaPorFecha[diaSeleccionadoStr].motivo}
-                    </p>
-                  )}
-                  {esAdmin && (
-                    <button
-                      type="button"
-                      className="mt-2 text-sm font-medium text-accent hover:underline"
-                      onClick={() => {
-                        restaurarClase(diaSeleccionadoStr);
-                        setDiaSeleccionado(null);
-                      }}
-                    >
-                      Restaurar clase
-                    </button>
-                  )}
-                </div>
-              ) : slotsDiaSeleccionado.length > 0 ? (
-                <ul className="mt-2 space-y-1">
-                  {slotsDiaSeleccionado.map((slot) => (
+              {clasesDiaSeleccionado.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">
+                  {esAdmin
+                    ? "Todavía no hay clases este día. Añade una abajo."
+                    : "No tienes clase programada este día."}
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {clasesDiaSeleccionado.map((clase) => (
                     <li
-                      key={slot.id}
-                      className="rounded-lg bg-accent-muted px-3 py-2 text-sm font-medium text-teal-800"
+                      key={clase.id}
+                      className={`rounded-lg border px-3 py-2 text-sm ${
+                        clase.cancelada
+                          ? "border-red-200 bg-red-50 text-red-700"
+                          : "border-accent/20 bg-accent-muted text-teal-800"
+                      }`}
                     >
-                      {formatearHora(slot.hora)}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">
+                            {formatearHora(clase.hora)}
+                            {esAdmin &&
+                              ` · ${clase.estudiante?.nombre ?? "Alumno"}`}
+                          </p>
+                          {clase.cancelada && (
+                            <p className="mt-0.5 text-xs">Cancelada</p>
+                          )}
+                        </div>
+                        {esAdmin && (
+                          <div className="flex shrink-0 gap-2">
+                            {clase.cancelada ? (
+                              <Button
+                                variante="enlace"
+                                type="button"
+                                onClick={() => cancelarClase(clase, true)}
+                              >
+                                Restaurar
+                              </Button>
+                            ) : (
+                              <Button
+                                variante="enlacePeligro"
+                                type="button"
+                                onClick={() => cancelarClase(clase)}
+                              >
+                                Cancelar
+                              </Button>
+                            )}
+                            <Button
+                              variante="enlacePeligro"
+                              type="button"
+                              onClick={() => eliminarClase(clase.id)}
+                            >
+                              Quitar
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="mt-2 text-sm text-slate-500">
-                  No hay clase programada este día.
-                </p>
               )}
-              {esAdmin &&
-                slotsDiaSeleccionado.length > 0 &&
-                !canceladaPorFecha[diaSeleccionadoStr] && (
-                  <button
-                    type="button"
-                    className="mt-3 text-sm font-medium text-red-600 hover:underline"
-                    onClick={() => abrirCancelar(diaSeleccionado)}
-                  >
-                    Cancelar clase de este día
-                  </button>
-                )}
             </section>
+
+            {esAdmin && (
+              <form
+                className="border-t border-slate-100 pt-4"
+                onSubmit={anadirClase}
+              >
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Añadir clase
+                </h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Alumno
+                    <select
+                      className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                      value={estudianteNuevo}
+                      onChange={(event) =>
+                        setEstudianteNuevo(event.target.value)
+                      }
+                      required
+                    >
+                      {estudiantes.length === 0 && (
+                        <option value="">Sin alumnos</option>
+                      )}
+                      {estudiantes.map((estudiante) => (
+                        <option key={estudiante.id} value={estudiante.id}>
+                          {estudiante.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium text-slate-700">
+                    Hora
+                    <input
+                      type="time"
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-accent"
+                      value={horaNueva}
+                      onChange={(event) => setHoraNueva(event.target.value)}
+                      required
+                    />
+                  </label>
+                </div>
+                <Button
+                  className="mt-4"
+                  type="submit"
+                  disabled={guardandoClase || estudiantes.length === 0}
+                >
+                  {guardandoClase ? "Guardando…" : "Programar clase"}
+                </Button>
+              </form>
+            )}
 
             <section>
               <h3 className="text-sm font-semibold text-slate-900">
@@ -638,13 +572,13 @@ export default function CalendarioDashboard({
                           )}
                         </div>
                         {esAdmin && (
-                          <button
+                          <Button
+                            variante="enlacePeligro"
                             type="button"
-                            className="shrink-0 text-xs font-medium text-red-700 hover:underline"
                             onClick={() => eliminarEvento(evento.id)}
                           >
                             Eliminar
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -694,60 +628,15 @@ export default function CalendarioDashboard({
                     />
                   </label>
                 </div>
-                <button
+                <Button
+                  className="mt-4"
                   type="submit"
                   disabled={guardandoEvento}
-                  className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
                 >
                   {guardandoEvento ? "Guardando…" : "Añadir al calendario"}
-                </button>
+                </Button>
               </form>
             )}
-          </div>
-        )}
-      </Modal>
-
-      <Modal
-        abierto={modalCancelar !== null}
-        titulo="Cancelar clase"
-        onClose={() => setModalCancelar(null)}
-      >
-        {modalCancelar && (
-          <div>
-            <p className="text-sm text-slate-600">
-              ¿Cancelar la clase del{" "}
-              <span className="font-medium capitalize">
-                {fechaLarga(formatearFechaLocal(modalCancelar))}
-              </span>
-              ?
-            </p>
-            <label className="mt-4 block text-sm font-medium text-slate-700">
-              Motivo (opcional)
-              <textarea
-                className="mt-2 min-h-20 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-accent"
-                placeholder="Ej: festivo, viaje, imprevisto…"
-                value={motivo}
-                onChange={(event) => setMotivo(event.target.value)}
-              />
-            </label>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                type="button"
-                disabled={guardandoCancelacion}
-                onClick={() => setModalCancelar(null)}
-              >
-                Cerrar
-              </button>
-              <button
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
-                type="button"
-                disabled={guardandoCancelacion}
-                onClick={confirmarCancelar}
-              >
-                {guardandoCancelacion ? "Un momento…" : "Cancelar clase"}
-              </button>
-            </div>
           </div>
         )}
       </Modal>

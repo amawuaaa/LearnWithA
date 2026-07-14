@@ -66,10 +66,16 @@ function Estadistica({ etiqueta, valor }) {
   );
 }
 
-function textoCuentaAtras(diasRestantes) {
-  if (diasRestantes === 0) return "¡Hoy tienes clase!";
-  if (diasRestantes === 1) return "Mañana tienes clase";
-  return `Tu próxima clase es en ${diasRestantes} días`;
+function textoCuentaAtras(diasRestantes, esAdmin = false) {
+  if (diasRestantes === 0) {
+    return esAdmin ? "¡Hoy hay clase!" : "¡Hoy tienes clase!";
+  }
+  if (diasRestantes === 1) {
+    return esAdmin ? "Mañana hay clase" : "Mañana tienes clase";
+  }
+  return esAdmin
+    ? `La próxima clase es en ${diasRestantes} días`
+    : `Tu próxima clase es en ${diasRestantes} días`;
 }
 
 export default function HomeDashboard({
@@ -95,7 +101,7 @@ export default function HomeDashboard({
         >
           <div>
             <p className="text-lg font-semibold">
-              {textoCuentaAtras(proximaClase.diasRestantes)}
+              {textoCuentaAtras(proximaClase.diasRestantes, esAdmin)}
             </p>
             <p className="mt-1 text-sm capitalize text-teal-100">
               {proximaClase.fechaLabel}
