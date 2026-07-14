@@ -35,7 +35,7 @@ test.describe("Perfil y calendario (alumno)", () => {
     await expect(page.getByRole("button", { name: "Hoy" })).toBeVisible();
 
     // Cambia de mes (carga lazy) y vuelve.
-    await page.getByRole("button", { name: "›" }).click();
+    await page.getByRole("button", { name: "Mes siguiente" }).click();
     await page.getByRole("button", { name: "Hoy" }).click();
 
     // Abre el modal del día 15 y ciérralo.
