@@ -35,7 +35,14 @@ jobs:
         run: pnpm verify:migrations
 
       - name: Build
-        run: pnpm build
+        run: |
+          if [ -n "$NEXT_PUBLIC_SUPABASE_URL" ]; then
+            pnpm build
+          else
+            NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co \
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-anon-key \
+              pnpm build
+          fi
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -44,7 +51,6 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Tests E2E
-        if: ${{ secrets.E2E_STUDENT_EMAIL && secrets.E2E_STUDENT_PASSWORD && secrets.NEXT_PUBLIC_SUPABASE_URL && secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: pnpm test:e2e
         env:
           CI: true
