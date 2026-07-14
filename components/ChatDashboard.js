@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Avatar from "./Avatar";
 import ChatAttachment from "./ChatAttachment";
 import ConfirmDialog from "./ConfirmDialog";
+import { IconVolver } from "./icons";
 
 const MAX_ARCHIVOS = 5;
 const MAX_TAMANO = 10 * 1024 * 1024;
@@ -36,22 +37,6 @@ function ordenarMensajes(mensajes) {
   );
 }
 
-function IconVolver({ className = "h-5 w-5" }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M15 6l-6 6 6 6" />
-    </svg>
-  );
-}
 
 export default function ChatDashboard({
   esAdmin,
@@ -568,7 +553,7 @@ export default function ChatDashboard({
       >
         {esAdmin && (
           <aside
-            className={`flex min-h-0 flex-col border-b border-slate-200 lg:border-b-0 lg:border-r ${
+            className={`flex min-h-0 w-full shrink-0 resize-none flex-col border-b border-slate-200 lg:w-[280px] lg:border-b-0 lg:border-r ${
               mostrarListaMovil ? "flex" : "hidden lg:flex"
             }`}
           >
@@ -628,7 +613,8 @@ export default function ChatDashboard({
               <header className="flex shrink-0 items-center gap-3 border-b border-slate-200 px-4 py-3">
                 {esAdmin && (
                   <Button
-                    className="flex h-9 w-9 shrink-0 items-center justify-center p-0 lg:hidden"
+                    compact
+                    className="flex h-9 w-9 shrink-0 items-center justify-center lg:hidden"
                     variante="secondary"
                     type="button"
                     aria-label="Volver a la lista de alumnos"
@@ -696,7 +682,7 @@ export default function ChatDashboard({
                         {editando === mensaje.id ? (
                           <div>
                             <Textarea
-                              className="h-24 min-w-0 max-w-full resize-none border-teal-200 bg-white text-base text-slate-800 sm:text-sm"
+                              className="h-24 min-w-0 max-w-full border-teal-200 bg-white text-base text-slate-800 sm:text-sm"
                               value={textoEdicion}
                               onChange={(event) =>
                                 setTextoEdicion(event.target.value)
@@ -833,7 +819,7 @@ export default function ChatDashboard({
                   </label>
                   <Textarea
                     id="nuevo-mensaje"
-                    className="h-12 min-w-0 flex-1 resize-none py-3 text-base sm:text-sm"
+                    className="h-12 min-w-0 flex-1 py-3 text-base sm:text-sm"
                     value={contenido}
                     onChange={(event) => setContenido(event.target.value)}
                     placeholder="Escribe un mensaje…"
@@ -849,7 +835,8 @@ export default function ChatDashboard({
                     onChange={seleccionarArchivos}
                   />
                   <Button
-                    className="flex h-12 w-12 shrink-0 items-center justify-center p-0 text-lg"
+                    compact
+                    className="flex h-12 w-12 shrink-0 items-center justify-center text-lg"
                     variante="secondary"
                     type="button"
                     title="Adjuntar archivos"

@@ -849,12 +849,16 @@ grant select, insert, update, delete on public.eventos_calendario
 grant select, insert, update, delete on public.clases_estudiante
   to authenticated;
 
--- USUARIOS: los autenticados pueden resolver nombres y roles.
-create policy "Usuarios autenticados pueden leer perfiles"
+-- USUARIOS: propio perfil, perfiles admin (chat) y listado completo para la profesora.
+create policy "Usuarios pueden leer perfiles visibles"
 on public.usuarios
 for select
 to authenticated
-using (true);
+using (
+  id = auth.uid()
+  or public.es_admin()
+  or rol = 'admin'
+);
 
 create policy "Usuarios pueden editar su perfil"
 on public.usuarios

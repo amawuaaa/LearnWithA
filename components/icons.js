@@ -84,3 +84,11 @@ export function IconPerfil({ className = "h-5 w-5" }) {
     </svg>
   );
 }
+
+export function IconVolver({ className = "h-5 w-5" }) {
+  return (
+    <svg className={className} {...base} aria-hidden="true">
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  );
+}

@@ -7,10 +7,10 @@ export default function Input({ className = "", ...props }) {
   );
 }
 
-export function Textarea({ className = "", ...props }) {
+export function Textarea({ className = "", redimensionable = false, ...props }) {
   return (
     <textarea
-      className={`${claseCampo} resize-y ${className}`.trim()}
+      className={`${claseCampo} ${redimensionable ? "resize-y" : "resize-none"} ${className}`.trim()}
       {...props}
     />
   );

@@ -46,6 +46,7 @@ En el editor SQL de Supabase, abre cada archivo pendiente y ejecútalo. La tabla
 | 024 | `024_recrear_mensualidades.sql` | Repara tabla `mensualidades` si faltaba tras la 001. |
 | 025 | `025_clases_por_estudiante.sql` | Tabla `clases_estudiante` + backfill 8 semanas. |
 | 026 | `026_generar_clases_mes.sql` | RPC `generar_clases_mes` (extender calendario por mes). |
+| 027 | `027_perfiles_visibles.sql` | Restringe lectura de perfiles: propio, admin y profesora. |
 
 ## RPC de administración
 
@@ -64,4 +65,14 @@ Tras añadir una migración nueva:
 2. Añade la fila correspondiente en este documento.
 3. Ejecuta la migración en Supabase (producción / staging).
 
-La app asume que la base de datos está al día con la migración **026** como mínimo para el calendario por alumno y la generación masiva de clases.
+La app asume que la base de datos está al día con la migración **027** como mínimo (privacidad de perfiles y calendario por alumno).
+
+## Verificación automática
+
+Antes de commit o en CI, ejecuta:
+
+```bash
+pnpm verify:migrations
+```
+
+Comprueba que la secuencia de `supabase/migrations/`, el índice de este documento y `schema.sql` están sincronizados con `lib/esquemaRequerido.js`.

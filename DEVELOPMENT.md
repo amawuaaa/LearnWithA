@@ -17,9 +17,16 @@ El proyecto en `~/Library/Mobile Documents/.../LearnWithA` vive en iCloud Drive.
 mkdir -p ~/Projects
 cd ~/Projects
 
-# 2. Clonar (el código de la app está en portal-clase/)
-git clone https://github.com/amawuaaa/LearnWithA.git learnwitha
-cd learnwitha/portal-clase
+# 2. Copiar el proyecto (recomendado si ya lo tienes en iCloud)
+mkdir -p ~/Projects
+rsync -a --exclude node_modules --exclude .next \
+  ~/Library/Mobile\ Documents/com~apple~CloudDocs/LearnWithA/portal-clase/ \
+  ~/Projects/learnwitha/
+
+# Alternativa: clonar desde GitHub (solo si ya has hecho push de todo)
+# git clone https://github.com/amawuaaa/LearnWithA.git ~/Projects/learnwitha
+
+cd ~/Projects/learnwitha
 
 # 3. Node 22 (ver .nvmrc)
 nvm install
@@ -34,7 +41,7 @@ cp .env.local.example .env.local
 pnpm dev
 ```
 
-Abre `http://localhost:3000` y trabaja siempre desde `~/Projects/learnwitha/portal-clase`.
+Abre `http://localhost:3000` y trabaja siempre desde `~/Projects/learnwitha`.
 
 ## Si ya desarrollabas en iCloud
 
@@ -44,7 +51,7 @@ Abre `http://localhost:3000` y trabaja siempre desde `~/Projects/learnwitha/port
 ```bash
 rsync -a --exclude node_modules --exclude .next \
   ~/Library/Mobile\ Documents/com~apple~CloudDocs/LearnWithA/portal-clase/ \
-  ~/Projects/learnwitha/portal-clase/
+  ~/Projects/learnwitha/
 ```
 
 3. En la nueva ubicación: `pnpm install` y `pnpm dev`.
@@ -61,6 +68,7 @@ rsync -a --exclude node_modules --exclude .next \
 ```bash
 pnpm lint
 pnpm test
+pnpm verify:migrations
 pnpm build
 ```
 

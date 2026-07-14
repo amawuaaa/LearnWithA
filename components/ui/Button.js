@@ -12,16 +12,18 @@ const variantes = {
 export default function Button({
   variante = "primary",
   className = "",
+  compact = false,
   type = "button",
   ...props
 }) {
   const esEnlace = variante === "ghost" || variante === "enlace" || variante === "enlacePeligro";
+  const sinPadding = compact || esEnlace;
 
   return (
     <button
       type={type}
       className={`rounded-lg text-sm font-medium transition disabled:opacity-60 ${
-        esEnlace ? "" : "px-4 py-2.5"
+        sinPadding ? "" : "px-4 py-2.5"
       } ${variantes[variante] ?? variantes.primary} ${className}`.trim()}
       {...props}
     />
