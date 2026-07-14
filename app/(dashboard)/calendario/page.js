@@ -1,20 +1,12 @@
 import CalendarioDashboard from "@/components/CalendarioDashboard";
+import { getPerfilActual } from "@/lib/auth";
 import { formatearFechaLocal } from "@/lib/horario";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function CalendarioPage() {
+  const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("rol")
-    .eq("id", user.id)
-    .single();
-
-  const esAdmin = perfil?.rol === "admin";
+  const esAdmin = perfil.rol === "admin";
   const hoy = new Date();
   const desde = new Date(hoy);
   desde.setDate(desde.getDate() - 30);

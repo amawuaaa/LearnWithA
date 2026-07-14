@@ -1,4 +1,5 @@
 import { generarJsonConGemini } from "@/lib/gemini";
+import { getPerfilActual } from "@/lib/auth";
 import { consumirCupoIa, respuestaLimiteIa } from "@/lib/limiteIa";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
@@ -77,24 +78,17 @@ function normalizarTest(test) {
 }
 
 export async function POST(request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, perfil } = await getPerfilActual();
 
   if (!user) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("rol")
-    .eq("id", user.id)
-    .single();
-
-  if (perfil?.rol !== "admin") {
+  if (perfil.rol !== "admin") {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
+
+  const supabase = await createClient();
 
   let cuerpo;
   try {

@@ -1,19 +1,11 @@
 import MemoriaDashboard from "@/components/MemoriaDashboard";
+import { getPerfilActual } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function MemoriaPage() {
+  const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("rol")
-    .eq("id", user.id)
-    .single();
-
-  const esAdmin = perfil?.rol === "admin";
+  const esAdmin = perfil.rol === "admin";
 
   // El admin necesita las parejas completas para editar; los alumnos leen
   // la vista juegos_memoria_alumno, que no revela qué carta hace pareja

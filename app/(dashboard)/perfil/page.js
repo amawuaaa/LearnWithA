@@ -1,26 +1,11 @@
 import ProfileDashboard from "@/components/ProfileDashboard";
+import { getPerfilActual } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function PerfilPage() {
+  const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("nombre, avatar_url, rol, nivel, creado_en")
-    .eq("id", user.id)
-    .single();
-
-  const perfilVisible = perfil ?? {
-    nombre: user.email?.split("@")[0] ?? "Estudiante",
-    avatar_url: null,
-    rol: "estudiante",
-    nivel: "A1",
-    creado_en: user.created_at,
-  };
-  const esAdmin = perfilVisible.rol === "admin";
+  const esAdmin = perfil.rol === "admin";
   const consultas = [
     supabase
       .from("mensualidades")
@@ -57,7 +42,7 @@ export default async function PerfilPage() {
   return (
     <ProfileDashboard
       usuario={{ id: user.id, email: user.email }}
-      perfil={perfilVisible}
+      perfil={perfil}
       mensualidades={mensualidadesResult.data ?? []}
       mensualidadesError={
         mensualidadesResult.error

@@ -1,20 +1,14 @@
 import VocabularyLessonPlayer from "@/components/VocabularyLessonPlayer";
+import { getPerfilActual } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function VocabularyLessonPage({ params }) {
+  const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("rol")
-    .eq("id", user.id)
-    .single();
-  const esAdmin = perfil?.rol === "admin";
+  const esAdmin = perfil.rol === "admin";
   const { data: leccion } = await supabase
     .from(
       esAdmin

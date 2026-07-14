@@ -1,19 +1,11 @@
 import VocabularyDashboard from "@/components/VocabularyDashboard";
+import { getPerfilActual } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function VocabularioPage() {
+  const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("rol, nivel")
-    .eq("id", user.id)
-    .single();
-
-  const esAdmin = perfil?.rol === "admin";
+  const esAdmin = perfil.rol === "admin";
   const consultas = [
     supabase
       .from(
@@ -48,7 +40,7 @@ export default async function VocabularioPage() {
       contenidos={contenidosResult.data ?? []}
       progresos={progresosResult?.data ?? []}
       esAdmin={esAdmin}
-      nivelUsuario={perfil?.nivel}
+      nivelUsuario={perfil.nivel}
     />
   );
 }

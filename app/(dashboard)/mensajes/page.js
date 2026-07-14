@@ -1,20 +1,13 @@
 import ChatDashboard from "@/components/ChatDashboard";
+import { getPerfilActual } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function MensajesPage() {
+  const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("nombre, avatar_url, rol")
-    .eq("id", user.id)
-    .single();
-  const esAdmin = perfil?.rol === "admin";
+  const esAdmin = perfil.rol === "admin";
   let estudiantes = [];
 
   if (esAdmin) {
@@ -58,8 +51,8 @@ export default async function MensajesPage() {
       esAdmin={esAdmin}
       usuario={{
         id: user.id,
-        nombre: perfil?.nombre ?? user.email?.split("@")[0] ?? "Usuario",
-        avatar_url: perfil?.avatar_url ?? null,
+        nombre: perfil.nombre,
+        avatar_url: perfil.avatar_url,
       }}
       estudiantes={estudiantes}
       initialMessages={mensajes}

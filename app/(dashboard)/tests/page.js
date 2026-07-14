@@ -1,19 +1,11 @@
 import TestsDashboard from "@/components/TestsDashboard";
+import { getPerfilActual } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function TestsPage() {
+  const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("rol, nivel")
-    .eq("id", user.id)
-    .single();
-
-  const esAdmin = perfil?.rol === "admin";
+  const esAdmin = perfil.rol === "admin";
 
   // El admin necesita respuesta_correcta para editar; los alumnos leen la
   // vista tests_alumno, que no expone las respuestas correctas.
@@ -43,7 +35,7 @@ export default async function TestsPage() {
     <TestsDashboard
       tests={tests ?? []}
       esAdmin={esAdmin}
-      nivelUsuario={perfil?.nivel}
+      nivelUsuario={perfil.nivel}
       resultados={resultados}
     />
   );

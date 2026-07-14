@@ -1,4 +1,5 @@
 import HomeDashboard from "@/components/HomeDashboard";
+import { getPerfilActual } from "@/lib/auth";
 import {
   formatearFechaLocal,
   formatearHora,
@@ -7,18 +8,9 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 export default async function InicioPage() {
+  const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: perfil } = await supabase
-    .from("usuarios")
-    .select("nombre, rol, nivel")
-    .eq("id", user.id)
-    .single();
-
-  const esAdmin = perfil?.rol === "admin";
+  const esAdmin = perfil.rol === "admin";
   const hoyStr = formatearFechaLocal(new Date());
 
   let consultaClases = supabase
@@ -103,13 +95,13 @@ export default async function InicioPage() {
     estadisticas = {
       testsCompletados: progresoResult.count ?? 0,
       mensualidad: mensualidadResult.data?.[0] ?? null,
-      nivel: perfil?.nivel ?? "A1",
+      nivel: perfil.nivel,
     };
   }
 
   return (
     <HomeDashboard
-      nombre={perfil?.nombre ?? "Profesora"}
+      nombre={perfil.nombre}
       esAdmin={esAdmin}
       anuncios={anuncios}
       estadisticas={estadisticas}
