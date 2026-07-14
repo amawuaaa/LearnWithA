@@ -84,11 +84,15 @@ pnpm db:verify:migration
 
 ## Tests E2E (Playwright)
 
-1. Crea `.env.e2e.local` con credenciales de un alumno de prueba:
+1. Crea `.env.e2e.local` con credenciales de cuentas de prueba:
 
 ```env
 E2E_STUDENT_EMAIL=alumno@ejemplo.com
 E2E_STUDENT_PASSWORD=contraseña-segura
+E2E_ADMIN_EMAIL=profesora@ejemplo.com
+E2E_ADMIN_PASSWORD=contraseña-segura
+# Opcional: prueba el registro completo (¡crea una cuenta real en cada ejecución!)
+# E2E_REGISTRATION_CODE=codigo-de-clase
 ```
 
 2. Instala el navegador y ejecuta:
@@ -99,7 +103,9 @@ pnpm exec playwright install chromium
 pnpm test:e2e
 ```
 
-Los tests de login, chat y mini-tests se omiten automáticamente si faltan credenciales.
+Los tests que necesitan sesión (login, chat, mini-tests, admin) se omiten
+automáticamente si faltan las credenciales correspondientes. Los tests de
+registro con código inválido y de las rutas de IA no necesitan credenciales.
 
 ### Secrets en GitHub Actions (CI completa)
 
@@ -111,7 +117,11 @@ En el repo → **Settings → Secrets and variables → Actions**, añade:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave anon/publica de Supabase |
 | `E2E_STUDENT_EMAIL` | Email del alumno de prueba |
 | `E2E_STUDENT_PASSWORD` | Contraseña del alumno de prueba |
+| `E2E_ADMIN_EMAIL` | Email de la cuenta admin de prueba |
+| `E2E_ADMIN_PASSWORD` | Contraseña de la cuenta admin de prueba |
 
-Sin los cuatro, la CI sigue pasando lint/tests/build pero **omite** los E2E.
+Sin estos secrets, la CI sigue pasando lint/tests/build pero **omite** los E2E
+que necesitan sesión. `E2E_REGISTRATION_CODE` no se configura en CI a propósito:
+crearía una cuenta nueva en cada ejecución.
 
 La CI en GitHub Actions ejecuta las mismas comprobaciones en cada push a `main`.
