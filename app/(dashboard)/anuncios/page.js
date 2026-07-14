@@ -2,7 +2,7 @@ import AnnouncementFeed from "@/components/AnnouncementFeed";
 import { getPerfilActual } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function NoticiasPage() {
+export default async function AnunciosPage() {
   const { user, perfil } = await getPerfilActual();
   const supabase = await createClient();
 

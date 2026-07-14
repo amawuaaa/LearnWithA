@@ -177,7 +177,11 @@ export default function AdminTestForm({ test, onSaved }) {
         <p className="mt-2 text-xs text-slate-500">
           Genera 5 preguntas de ejemplo que puedes revisar y editar antes de guardar.
         </p>
-        {errorIa && <p className="mt-2 text-sm text-red-700">{errorIa}</p>}
+        {errorIa && (
+          <p className="mt-2 text-sm text-red-700" role="alert">
+            {errorIa}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -324,7 +328,11 @@ export default function AdminTestForm({ test, onSaved }) {
         + Añadir pregunta
       </button>
 
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
 
       <div>
         <button

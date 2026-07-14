@@ -12,7 +12,10 @@ export default function ChatListaAlumnos({
       <div className="shrink-0 border-b border-slate-200 px-4 py-3">
         <h2 className="font-semibold text-slate-900">Alumnos</h2>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        aria-live="polite"
+      >
         {conversaciones.map((estudiante) => (
           <button
             key={estudiante.id}

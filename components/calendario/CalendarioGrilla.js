@@ -50,6 +50,7 @@ export default function CalendarioGrilla({ cal }) {
           <button
             type="button"
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            aria-label="Mes anterior"
             onClick={() => cal.cambiarMes(-1)}
           >
             ‹
@@ -66,6 +67,7 @@ export default function CalendarioGrilla({ cal }) {
           <button
             type="button"
             className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            aria-label="Mes siguiente"
             onClick={() => cal.cambiarMes(1)}
           >
             ›

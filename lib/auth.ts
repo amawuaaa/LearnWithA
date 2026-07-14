@@ -1,9 +1,36 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { cache } from "react";
+import type { User } from "@supabase/supabase-js";
+
+export interface Perfil {
+  nombre: string;
+  avatar_url: string | null;
+  rol: "admin" | "estudiante";
+  nivel: string;
+  creado_en?: string;
+}
+
+type PerfilActual = {
+  user: User | null;
+  perfil: Perfil | null;
+};
+
+type RequireAdminOk = {
+  ok: true;
+  user: User;
+  perfil: Perfil;
+};
+
+type RequireAdminError = {
+  ok: false;
+  response: NextResponse;
+};
+
+export type RequireAdminResult = RequireAdminOk | RequireAdminError;
 
 // Una sola consulta de usuario + perfil por petición (layout, página, etc.).
-export const getPerfilActual = cache(async () => {
+export const getPerfilActual = cache(async (): Promise<PerfilActual> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,7 +58,7 @@ export const getPerfilActual = cache(async () => {
   };
 });
 
-export async function requireAdmin() {
+export async function requireAdmin(): Promise<RequireAdminResult> {
   const { user, perfil } = await getPerfilActual();
 
   if (!user) {

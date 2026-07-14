@@ -190,7 +190,11 @@ export default function AdminVocabularyLessonForm({ leccion, onSaved }) {
           Se usará el nivel {nivel}. Podrás revisar y modificar todo antes de
           guardarlo.
         </p>
-        {errorIa && <p className="mt-2 text-sm text-red-700">{errorIa}</p>}
+        {errorIa && (
+          <p className="mt-2 text-sm text-red-700" role="alert">
+            {errorIa}
+          </p>
+        )}
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -339,7 +343,11 @@ export default function AdminVocabularyLessonForm({ leccion, onSaved }) {
         </div>
       </section>
 
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
 
       <button
         className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"

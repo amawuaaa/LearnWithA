@@ -168,7 +168,11 @@ export default function AdminMemoryForm({ juego, onSaved }) {
         <p className="mt-2 text-xs text-slate-500">
           Se generarán 8 parejas para completar un tablero 4×4.
         </p>
-        {errorIa && <p className="mt-2 text-sm text-red-700">{errorIa}</p>}
+        {errorIa && (
+          <p className="mt-2 text-sm text-red-700" role="alert">
+            {errorIa}
+          </p>
+        )}
       </section>
 
       <label className="block text-sm font-medium text-slate-700">
@@ -245,7 +249,11 @@ export default function AdminMemoryForm({ juego, onSaved }) {
         {pares.length >= 8 ? "Tablero 4×4 completo" : "+ Añadir pareja"}
       </button>
 
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      )}
 
       <div>
         <button

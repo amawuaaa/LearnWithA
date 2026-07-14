@@ -72,6 +72,12 @@ pnpm verify:migrations
 pnpm build
 ```
 
+## TypeScript gradual
+
+La lógica interna crítica en `lib/` usa TypeScript (`.ts`) con `allowJs: true` para
+convivir con el resto del código en JavaScript. Los componentes React siguen en `.js`
+por ahora. Configuración en `tsconfig.json`.
+
 ## Aplicar migración 027 (privacidad de perfiles)
 
 1. Añade `SUPABASE_DB_URL` a `.env.local` (cadena de conexión de Supabase → Settings → Database).
@@ -106,6 +112,14 @@ pnpm test:e2e
 Los tests que necesitan sesión (login, chat, mini-tests, admin) se omiten
 automáticamente si faltan las credenciales correspondientes. Los tests de
 registro con código inválido y de las rutas de IA no necesitan credenciales.
+
+Variables disponibles en `.env.e2e.local`:
+
+| Variable | Uso |
+|----------|-----|
+| `E2E_STUDENT_EMAIL` / `E2E_STUDENT_PASSWORD` | Flujos de alumno (login, chat, tests) |
+| `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` | Flujos de profesora (admin, anuncios, IA) |
+| `E2E_REGISTRATION_CODE` | (Opcional) Registro completo con código válido |
 
 ### Secrets en GitHub Actions (CI completa)
 

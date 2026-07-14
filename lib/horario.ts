@@ -6,38 +6,60 @@ export const NOMBRES_DIAS = [
   "Jueves",
   "Viernes",
   "Sábado",
-];
+] as const;
 
-export const NOMBRES_DIAS_CORTOS = ["D", "L", "M", "X", "J", "V", "S"];
+export const NOMBRES_DIAS_CORTOS = ["D", "L", "M", "X", "J", "V", "S"] as const;
 
-export function formatearHora(hora) {
+export interface SlotHorario {
+  dia_semana: number;
+  hora: string;
+}
+
+export interface ClaseCalendario {
+  id?: string;
+  fecha: string;
+  hora: string;
+  cancelada?: boolean;
+  estudiante?: { nombre: string };
+}
+
+export interface DiaGrilla {
+  fecha: Date;
+  enMes: boolean;
+}
+
+export function formatearHora(hora: string | null | undefined): string {
   if (!hora) return "";
   return hora.slice(0, 5);
 }
 
-export function slotsPorDia(horario, diaSemana) {
+export function slotsPorDia(horario: SlotHorario[], diaSemana: number) {
   return horario
     .filter((slot) => slot.dia_semana === diaSemana)
     .sort((a, b) => a.hora.localeCompare(b.hora));
 }
 
-export function diasConClase(horario) {
+export function diasConClase(horario: SlotHorario[]) {
   return new Set(horario.map((slot) => slot.dia_semana));
 }
 
 // Evita desfases de zona horaria: no usa toISOString (que convierte a UTC).
-export function formatearFechaLocal(fecha) {
+export function formatearFechaLocal(fecha: Date): string {
   const anio = fecha.getFullYear();
   const mes = String(fecha.getMonth() + 1).padStart(2, "0");
   const dia = String(fecha.getDate()).padStart(2, "0");
   return `${anio}-${mes}-${dia}`;
 }
 
-function inicioDelDia(fecha) {
+function inicioDelDia(fecha: Date) {
   return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
 }
 
-export function clasesPorFecha(clases, fechaStr, { soloActivas = false } = {}) {
+export function clasesPorFecha(
+  clases: ClaseCalendario[],
+  fechaStr: string,
+  { soloActivas = false }: { soloActivas?: boolean } = {},
+) {
   return clases
     .filter(
       (clase) =>
@@ -46,7 +68,10 @@ export function clasesPorFecha(clases, fechaStr, { soloActivas = false } = {}) {
     .sort((a, b) => a.hora.localeCompare(b.hora));
 }
 
-export function fechasConClase(clases, { soloActivas = true } = {}) {
+export function fechasConClase(
+  clases: ClaseCalendario[],
+  { soloActivas = true }: { soloActivas?: boolean } = {},
+) {
   return new Set(
     clases
       .filter((clase) => !soloActivas || !clase.cancelada)
@@ -54,7 +79,10 @@ export function fechasConClase(clases, { soloActivas = true } = {}) {
   );
 }
 
-export function proximaClaseEstudiante(clases, desde = new Date()) {
+export function proximaClaseEstudiante(
+  clases: ClaseCalendario[],
+  desde: Date = new Date(),
+) {
   const hoyStr = formatearFechaLocal(inicioDelDia(desde));
   const activas = clases
     .filter((clase) => !clase.cancelada && clase.fecha >= hoyStr)
@@ -69,7 +97,7 @@ export function proximaClaseEstudiante(clases, desde = new Date()) {
   const clasesDelDia = activas.filter((clase) => clase.fecha === primeraFecha);
   const fecha = new Date(`${primeraFecha}T00:00:00`);
   const diasRestantes = Math.round(
-    (inicioDelDia(fecha) - inicioDelDia(desde)) / 86400000,
+    (inicioDelDia(fecha).getTime() - inicioDelDia(desde).getTime()) / 86400000,
   );
 
   return {
@@ -87,6 +115,11 @@ export function proximaClase({
   canceladas,
   desde = new Date(),
   horizonDias = 60,
+}: {
+  diasSemana: Set<number>;
+  canceladas?: Set<string>;
+  desde?: Date;
+  horizonDias?: number;
 }) {
   if (!diasSemana || diasSemana.size === 0) return null;
 
@@ -107,12 +140,12 @@ export function proximaClase({
 
 // Genera la grilla de un mes (incluyendo días del mes anterior/siguiente
 // para completar semanas de domingo a sábado) para pintar un calendario.
-export function generarGrillaMes(anio, mes) {
+export function generarGrillaMes(anio: number, mes: number): DiaGrilla[] {
   const primerDia = new Date(anio, mes, 1);
   const inicioGrilla = new Date(primerDia);
   inicioGrilla.setDate(inicioGrilla.getDate() - primerDia.getDay());
 
-  const dias = [];
+  const dias: DiaGrilla[] = [];
   const cursor = new Date(inicioGrilla);
 
   for (let i = 0; i < 42; i += 1) {
@@ -126,7 +159,7 @@ export function generarGrillaMes(anio, mes) {
   return dias;
 }
 
-export function rangoGrillaMes(anio, mes) {
+export function rangoGrillaMes(anio: number, mes: number) {
   const grilla = generarGrillaMes(anio, mes);
 
   return {
@@ -135,7 +168,7 @@ export function rangoGrillaMes(anio, mes) {
   };
 }
 
-export function claveMes(fecha) {
+export function claveMes(fecha: Date) {
   const mes = String(fecha.getMonth() + 1).padStart(2, "0");
   return `${fecha.getFullYear()}-${mes}`;
 }
