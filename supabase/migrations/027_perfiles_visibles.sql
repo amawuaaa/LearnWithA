@@ -2,6 +2,7 @@
 -- la profesora (admin) sigue viendo todos los alumnos.
 
 drop policy if exists "Usuarios autenticados pueden leer perfiles" on public.usuarios;
+drop policy if exists "Usuarios pueden leer perfiles visibles" on public.usuarios;
 
 create policy "Usuarios pueden leer perfiles visibles"
 on public.usuarios

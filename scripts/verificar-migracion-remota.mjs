@@ -2,8 +2,10 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { cargarEnvLocal } from "./cargar-env-local.mjs";
 
 const raizProyecto = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+cargarEnvLocal(raizProyecto);
 const dbUrl = process.env.SUPABASE_DB_URL?.trim();
 
 if (!dbUrl) {
@@ -29,7 +31,7 @@ const comando = fs.existsSync(supabaseBin) ? supabaseBin : "supabase";
 
 const resultado = spawnSync(
   comando,
-  ["db", "execute", "--file", temporal, "--db-url", dbUrl],
+  ["db", "query", "--file", temporal, "--db-url", dbUrl],
   { encoding: "utf8", env: process.env },
 );
 
