@@ -1,5 +1,9 @@
 "use client";
 
+import Button from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
+import PageHeader from "@/components/ui/PageHeader";
+import { Textarea } from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Avatar from "./Avatar";
@@ -548,13 +552,12 @@ export default function ChatDashboard({
         <div
           className={`mb-4 shrink-0 ${vistaMovil === "chat" ? "hidden lg:block" : ""}`}
         >
-          <p className="text-sm font-medium text-accent">Comunicación privada</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
-            Mensajes
-          </h1>
-          <p className="mt-1 hidden text-slate-500 sm:block">
-            Responde de forma privada a las dudas de tus alumnos.
-          </p>
+          <PageHeader
+            etiqueta="Comunicación privada"
+            titulo="Mensajes"
+            descripcion="Responde de forma privada a las dudas de tus alumnos."
+            className="mb-0"
+          />
         </div>
       )}
 
@@ -607,9 +610,9 @@ export default function ChatDashboard({
                 </button>
               ))}
               {estudiantes.length === 0 && (
-                <p className="p-6 text-center text-sm text-slate-500">
+                <EmptyState className="m-4 border-0 bg-transparent p-6 shadow-none">
                   Todavía no hay alumnos.
-                </p>
+                </EmptyState>
               )}
             </div>
           </aside>
@@ -624,14 +627,15 @@ export default function ChatDashboard({
             <>
               <header className="flex shrink-0 items-center gap-3 border-b border-slate-200 px-4 py-3">
                 {esAdmin && (
-                  <button
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+                  <Button
+                    className="flex h-9 w-9 shrink-0 items-center justify-center p-0 lg:hidden"
+                    variante="secondary"
                     type="button"
                     aria-label="Volver a la lista de alumnos"
                     onClick={() => setVistaMovil("lista")}
                   >
                     <IconVolver />
-                  </button>
+                  </Button>
                 )}
                 {esAdmin && (
                   <Avatar
@@ -657,8 +661,9 @@ export default function ChatDashboard({
               >
                 {hayMasMensajes && !cargandoConversacion && (
                   <div className="text-center">
-                    <button
-                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                    <Button
+                      variante="secondary"
+                      className="px-4 py-2 text-xs"
                       type="button"
                       disabled={cargandoAnteriores}
                       onClick={cargarMensajesAnteriores}
@@ -666,7 +671,7 @@ export default function ChatDashboard({
                       {cargandoAnteriores
                         ? "Cargando…"
                         : "Cargar mensajes anteriores"}
-                    </button>
+                    </Button>
                   </div>
                 )}
                 {cargandoConversacion && (
@@ -690,8 +695,8 @@ export default function ChatDashboard({
                       >
                         {editando === mensaje.id ? (
                           <div>
-                            <textarea
-                              className="h-24 w-full min-w-0 max-w-full resize-none rounded-lg border border-teal-200 bg-white px-3 py-2 text-base text-slate-800 outline-none focus:ring-2 focus:ring-accent-muted sm:text-sm"
+                            <Textarea
+                              className="h-24 min-w-0 max-w-full resize-none border-teal-200 bg-white text-base text-slate-800 sm:text-sm"
                               value={textoEdicion}
                               onChange={(event) =>
                                 setTextoEdicion(event.target.value)
@@ -782,13 +787,11 @@ export default function ChatDashboard({
                   );
                 })}
                 {!cargandoConversacion && mensajesVisibles.length === 0 && (
-                  <div className="flex h-full items-center justify-center text-center text-sm text-slate-500">
-                    <p>
-                      {esAdmin
-                        ? "Todavía no hay mensajes. Puedes iniciar la conversación."
-                        : "Todavía no hay mensajes. Escribe tu primera duda."}
-                    </p>
-                  </div>
+                  <EmptyState className="flex h-full items-center justify-center border-0 bg-transparent shadow-none">
+                    {esAdmin
+                      ? "Todavía no hay mensajes. Puedes iniciar la conversación."
+                      : "Todavía no hay mensajes. Escribe tu primera duda."}
+                  </EmptyState>
                 )}
                 <div ref={finalRef} />
               </div>
@@ -828,9 +831,9 @@ export default function ChatDashboard({
                   <label className="sr-only" htmlFor="nuevo-mensaje">
                     Escribe un mensaje
                   </label>
-                  <textarea
+                  <Textarea
                     id="nuevo-mensaje"
-                    className="h-12 min-w-0 flex-1 resize-none rounded-lg border border-slate-300 px-3 py-3 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent-muted sm:text-sm"
+                    className="h-12 min-w-0 flex-1 resize-none py-3 text-base sm:text-sm"
                     value={contenido}
                     onChange={(event) => setContenido(event.target.value)}
                     placeholder="Escribe un mensaje…"
@@ -845,8 +848,9 @@ export default function ChatDashboard({
                     accept="image/jpeg,image/png,image/webp,application/pdf,text/plain,.doc,.docx"
                     onChange={seleccionarArchivos}
                   />
-                  <button
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-slate-300 text-lg text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                  <Button
+                    className="flex h-12 w-12 shrink-0 items-center justify-center p-0 text-lg"
+                    variante="secondary"
                     type="button"
                     title="Adjuntar archivos"
                     aria-label="Adjuntar archivos"
@@ -858,9 +862,9 @@ export default function ChatDashboard({
                     onClick={() => archivoInputRef.current?.click()}
                   >
                     📎
-                  </button>
-                  <button
-                    className="flex h-12 shrink-0 items-center justify-center rounded-lg bg-accent px-4 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-60"
+                  </Button>
+                  <Button
+                    className="h-12 shrink-0"
                     type="submit"
                     disabled={
                       enviando || (!contenido.trim() && archivos.length === 0)
@@ -868,7 +872,7 @@ export default function ChatDashboard({
                     }
                   >
                     {enviando ? "Enviando…" : "Enviar"}
-                  </button>
+                  </Button>
                 </div>
                 {error && (
                   <p className="mt-2 text-sm text-red-700" role="alert">
@@ -878,9 +882,9 @@ export default function ChatDashboard({
               </form>
             </>
           ) : (
-            <div className="flex min-h-0 flex-1 items-center justify-center p-8 text-center text-slate-500">
+            <EmptyState className="m-4 flex min-h-0 flex-1 items-center justify-center border-0 bg-transparent shadow-none">
               Selecciona un alumno para abrir la conversación.
-            </div>
+            </EmptyState>
           )}
         </section>
       </div>

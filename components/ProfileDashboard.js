@@ -1,5 +1,8 @@
 "use client";
 
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import PageHeader from "@/components/ui/PageHeader";
 import { estilosEstadoMensualidad as estilosEstado } from "@/lib/mensualidades";
 import { NIVELES } from "@/lib/niveles";
 import { createClient } from "@/lib/supabase/client";
@@ -181,15 +184,11 @@ export default function ProfileDashboard({
 
   return (
     <>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-accent">Cuenta</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
-          Mi perfil
-        </h1>
-        <p className="mt-2 text-slate-500">
-          Consulta tus datos personales y la información de la clase.
-        </p>
-      </div>
+      <PageHeader
+        etiqueta="Cuenta"
+        titulo="Mi perfil"
+        descripcion="Consulta tus datos personales y la información de la clase."
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
@@ -258,38 +257,36 @@ export default function ProfileDashboard({
               className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row"
               onSubmit={guardarNombre}
             >
-              <input
-                className="flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-accent"
+              <Input
+                className="flex-1"
                 value={nombre}
                 onChange={(event) => setNombre(event.target.value)}
                 maxLength={100}
                 required
               />
-              <button
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
-                type="submit"
-              >
+              <Button type="submit">
                 Guardar
-              </button>
-              <button
-                className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+              </Button>
+              <Button
+                variante="secondary"
                 type="button"
                 onClick={() => setEditandoNombre(false)}
               >
                 Cancelar
-              </button>
+              </Button>
               {errorNombre && (
                 <p className="text-sm text-red-700">{errorNombre}</p>
               )}
             </form>
           ) : (
-            <button
-              className="mt-6 text-sm font-medium text-accent hover:underline"
+            <Button
+              className="mt-6"
+              variante="ghost"
               type="button"
               onClick={() => setEditandoNombre(true)}
             >
               Editar nombre
-            </button>
+            </Button>
           )}
         </section>
 
@@ -471,13 +468,9 @@ export default function ProfileDashboard({
                 </p>
               )}
             </div>
-            <button
-              className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
-              type="button"
-              onClick={() => abrirMensualidad()}
-            >
+            <Button type="button" onClick={() => abrirMensualidad()}>
               Nueva mensualidad
-            </button>
+            </Button>
           </div>
 
           <AdminBulkMonthlyForm
@@ -517,15 +510,15 @@ export default function ProfileDashboard({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-3">
-                        <button
-                          className="font-medium text-accent hover:underline"
+                        <Button
+                          variante="enlace"
                           type="button"
                           onClick={() => abrirMensualidad(mensualidad)}
                         >
                           Editar
-                        </button>
-                        <button
-                          className="font-medium text-red-600 hover:underline"
+                        </Button>
+                        <Button
+                          variante="enlacePeligro"
                           type="button"
                           onClick={() => {
                             setErrorBorradoMensualidad("");
@@ -533,7 +526,7 @@ export default function ProfileDashboard({
                           }}
                         >
                           Eliminar
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

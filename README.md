@@ -5,12 +5,15 @@ en tiempo real, mini-tests, seguimiento de resultados, vocabulario y juegos.
 
 ## Configuración inicial
 
-Requisitos: Node.js 20 o posterior y pnpm. Se recomienda Node.js 22.
+Requisitos: **Node.js 22** (ver `.nvmrc`) y pnpm.
+
+> **Desarrollo local:** no trabajes desde iCloud Drive; provoca hot reload
+> inestable. Sigue la guía en [`DEVELOPMENT.md`](DEVELOPMENT.md).
 
 1. Crea un proyecto en Supabase.
 2. Abre el editor SQL de Supabase y ejecuta `supabase/schema.sql`.
    Si ya ejecutaste el esquema anteriormente, aplica en orden los archivos
-   pendientes de `supabase/migrations/`.
+   pendientes según [`supabase/MIGRATIONS.md`](supabase/MIGRATIONS.md).
 3. Crea las cuentas desde Authentication > Users. Cada cuenta obtiene
    automáticamente un perfil con rol `estudiante`.
 4. Convierte la cuenta de la profesora en admin desde el editor SQL:
@@ -69,5 +72,6 @@ producción.
 
 ```bash
 pnpm lint
+pnpm test
 pnpm build
 ```

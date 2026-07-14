@@ -1,5 +1,8 @@
 "use client";
 
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import Input from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -82,7 +85,7 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-12">
-      <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <Card className="w-full max-w-md p-8">
         <div className="mb-8">
           <p className="mb-2 text-lg font-semibold tracking-tight text-slate-900">
             Learn<span className="text-accent">WithA</span>
@@ -106,8 +109,8 @@ export default function LoginPage() {
             <>
               <label className="block text-sm font-medium text-slate-700">
                 Nombre
-                <input
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
+                <Input
+                  className="mt-2"
                   name="nombre"
                   autoComplete="name"
                   required
@@ -117,8 +120,8 @@ export default function LoginPage() {
 
               <label className="block text-sm font-medium text-slate-700">
                 Código de clase
-                <input
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
+                <Input
+                  className="mt-2"
                   name="codigo"
                   type="password"
                   autoComplete="off"
@@ -130,8 +133,8 @@ export default function LoginPage() {
 
           <label className="block text-sm font-medium text-slate-700">
             Email
-            <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
+            <Input
+              className="mt-2"
               name="email"
               type="email"
               autoComplete="email"
@@ -141,8 +144,8 @@ export default function LoginPage() {
 
           <label className="block text-sm font-medium text-slate-700">
             Contraseña
-            <input
-              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
+            <Input
+              className="mt-2"
               name="password"
               type="password"
               autoComplete={esRegistro ? "new-password" : "current-password"}
@@ -165,8 +168,8 @@ export default function LoginPage() {
           {esRegistro && (
             <label className="block text-sm font-medium text-slate-700">
               Repetir contraseña
-              <input
-                className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted"
+              <Input
+                className="mt-2"
                 name="confirmarPassword"
                 type="password"
                 autoComplete="new-password"
@@ -188,8 +191,8 @@ export default function LoginPage() {
             </p>
           )}
 
-          <button
-            className="w-full rounded-lg bg-accent px-4 py-2.5 font-medium text-white transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          <Button
+            className="w-full"
             type="submit"
             disabled={cargando}
           >
@@ -200,13 +203,13 @@ export default function LoginPage() {
               : esRegistro
                 ? "Crear cuenta"
                 : "Entrar"}
-          </button>
+          </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
           {esRegistro ? "¿Ya tienes una cuenta?" : "¿No tienes una cuenta?"}{" "}
-          <button
-            className="font-medium text-accent hover:underline"
+          <Button
+            variante="ghost"
             type="button"
             onClick={() => {
               setEsRegistro(!esRegistro);
@@ -215,9 +218,9 @@ export default function LoginPage() {
             }}
           >
             {esRegistro ? "Inicia sesión" : "Regístrate"}
-          </button>
+          </Button>
         </p>
-      </section>
+      </Card>
     </main>
   );
 }

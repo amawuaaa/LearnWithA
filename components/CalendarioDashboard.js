@@ -2,6 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import PageHeader from "@/components/ui/PageHeader";
+import AdminGenerarClasesForm from "./AdminGenerarClasesForm";
 import {
   NOMBRES_DIAS_CORTOS,
   clasesPorFecha,
@@ -276,6 +277,13 @@ export default function CalendarioDashboard({
             : "Consulta tus clases, exámenes y avisos del mes."
         }
       />
+
+      {esAdmin && (
+        <AdminGenerarClasesForm
+          estudiantes={estudiantes}
+          onGeneradas={setClases}
+        />
+      )}
 
       {error && (
         <p className="mb-4 text-sm text-red-700" role="alert">
