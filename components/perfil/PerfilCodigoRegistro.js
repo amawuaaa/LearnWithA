@@ -2,9 +2,9 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
-import ConfirmDialog from "./ConfirmDialog";
+import ConfirmDialog from "../ConfirmDialog";
 
-export default function AdminRegistrationCode({ codigoInicial }) {
+export default function PerfilCodigoRegistro({ codigoInicial }) {
   const [codigo, setCodigo] = useState(codigoInicial?.codigo ?? "");
   const [generando, setGenerando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
