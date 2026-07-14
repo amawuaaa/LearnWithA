@@ -40,6 +40,7 @@ export async function middleware(request) {
   const esRutaPublica =
     esLogin ||
     request.nextUrl.pathname === "/recuperar-password" ||
+    request.nextUrl.pathname === "/actualizar-password" ||
     request.nextUrl.pathname === "/auth/callback";
 
   if (!user && !esRutaPublica) {

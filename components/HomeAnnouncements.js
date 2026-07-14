@@ -1,73 +1,23 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
-
-function ordenar(anuncios) {
-  return [...anuncios].sort(
-    (a, b) => new Date(b.creado_en) - new Date(a.creado_en),
-  );
-}
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import { useAnnouncements } from "@/lib/hooks/useAnnouncements";
 
 export default function HomeAnnouncements({ initialAnuncios }) {
-  const [anuncios, setAnuncios] = useState(initialAnuncios);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    async function sincronizar(payload) {
-      if (payload.eventType === "DELETE") {
-        setAnuncios((actuales) =>
-          actuales.filter((anuncio) => anuncio.id !== payload.old.id),
-        );
-        return;
-      }
-
-      const { data } = await supabase
-        .from("anuncios")
-        .select("*, usuarios(nombre)")
-        .eq("id", payload.new.id)
-        .single();
-
-      if (!data) return;
-
-      setAnuncios((actuales) =>
-        ordenar([
-          data,
-          ...actuales.filter((anuncio) => anuncio.id !== data.id),
-        ]).slice(0, 3),
-      );
-    }
-
-    const canal = supabase
-      .channel("muro-anuncios-inicio")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "anuncios" },
-        sincronizar,
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(canal);
-    };
-  }, []);
+  const [anuncios] = useAnnouncements(initialAnuncios, {
+    limite: 3,
+    canal: "muro-anuncios-inicio",
+  });
 
   if (anuncios.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-        Todavía no hay anuncios.
-      </div>
-    );
+    return <EmptyState>Todavía no hay anuncios.</EmptyState>;
   }
 
   return (
     <div className="space-y-4" aria-live="polite">
       {anuncios.map((anuncio) => (
-        <article
-          key={anuncio.id}
-          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-        >
+        <Card key={anuncio.id} className="p-6">
           <h3 className="text-lg font-semibold text-slate-900">
             {anuncio.titulo}
           </h3>
@@ -83,7 +33,7 @@ export default function HomeAnnouncements({ initialAnuncios }) {
           <p className="mt-3 line-clamp-3 leading-7 text-slate-700">
             {anuncio.contenido}
           </p>
-        </article>
+        </Card>
       ))}
     </div>
   );

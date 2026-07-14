@@ -6,9 +6,26 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+  "http://localhost:3000";
+
 export const metadata = {
   title: "LearnWithA",
   description: "Recursos, noticias y tests para la clase.",
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    title: "LearnWithA",
+    description: "Recursos, noticias y tests para la clase.",
+    siteName: "LearnWithA",
+    locale: "es_ES",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "LearnWithA",
+    description: "Recursos, noticias y tests para la clase.",
+  },
 };
 
 export default function RootLayout({ children }) {

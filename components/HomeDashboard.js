@@ -1,10 +1,12 @@
 import { estilosEstadoMensualidad } from "@/lib/mensualidades";
 import Link from "next/link";
 import HomeAnnouncements from "./HomeAnnouncements";
+import PageHeader from "./ui/PageHeader";
 import {
   IconAnuncios,
   IconCalendario,
   IconMemoria,
+  IconMensajes,
   IconPerfil,
   IconTests,
   IconVocabulario,
@@ -22,6 +24,12 @@ const accesos = [
     etiqueta: "Anuncios",
     descripcion: "Novedades y avisos de la clase",
     Icono: IconAnuncios,
+  },
+  {
+    href: "/mensajes",
+    etiqueta: "Mensajes",
+    descripcion: "Chatea con la profesora",
+    Icono: IconMensajes,
   },
   {
     href: "/tests",
@@ -73,15 +81,12 @@ export default function HomeDashboard({
 }) {
   return (
     <>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-accent">Inicio</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
-          Hola, {nombre}
-        </h1>
-        <p className="mt-2 text-slate-500">
-          Esto es lo último en tu clase.
-        </p>
-      </div>
+      <PageHeader
+        etiqueta="Inicio"
+        titulo={`Hola, ${nombre}`}
+        descripcion="Esto es lo último en tu clase."
+        className="mb-8"
+      />
 
       {proximaClase && (
         <Link

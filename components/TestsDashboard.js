@@ -8,6 +8,10 @@ import AdminTestForm from "./AdminTestForm";
 import ConfirmDialog from "./ConfirmDialog";
 import Modal from "./Modal";
 import TestPlayer from "./TestPlayer";
+import Button from "./ui/Button";
+import Card from "./ui/Card";
+import EmptyState from "./ui/EmptyState";
+import PageHeader from "./ui/PageHeader";
 
 export default function TestsDashboard({
   tests,
@@ -51,40 +55,29 @@ export default function TestsDashboard({
 
   return (
     <>
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-accent">Práctica</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
-            Tests
-          </h1>
-          <p className="mt-2 text-slate-500">
-            {esAdmin
-              ? "Gestiona los tests y consulta los resultados."
-              : "Responde los mini-tests y comprueba tu progreso."}
-          </p>
-        </div>
-        {esAdmin && (
-          <button
-            className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
-            type="button"
-            onClick={() => abrir()}
-          >
-            Crear test
-          </button>
-        )}
-      </div>
+      <PageHeader
+        etiqueta="Práctica"
+        titulo="Tests"
+        descripcion={
+          esAdmin
+            ? "Gestiona los tests y consulta los resultados."
+            : "Responde los mini-tests y comprueba tu progreso."
+        }
+        accion={
+          esAdmin ? (
+            <Button className="shrink-0" type="button" onClick={() => abrir()}>
+              Crear test
+            </Button>
+          ) : null
+        }
+      />
 
       {tests.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-          Todavía no hay tests disponibles.
-        </div>
+        <EmptyState>Todavía no hay tests disponibles.</EmptyState>
       ) : esAdmin ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {tests.map((test) => (
-            <article
-              key={test.id}
-              className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
+            <Card key={test.id} className="p-5">
               <span className={nivelBadgeClase(test.nivel)}>
                 Nivel {test.nivel}
               </span>
@@ -113,7 +106,7 @@ export default function TestsDashboard({
                   Eliminar
                 </button>
               </div>
-            </article>
+            </Card>
           ))}
         </div>
       ) : (

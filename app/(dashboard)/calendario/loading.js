@@ -1,5 +1,5 @@
-import PageSkeleton from "@/components/PageSkeleton";
+import CalendarioSkeleton from "@/components/CalendarioSkeleton";
 
 export default function Cargando() {
-  return <PageSkeleton />;
+  return <CalendarioSkeleton />;
 }

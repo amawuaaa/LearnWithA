@@ -32,6 +32,23 @@ function ordenarMensajes(mensajes) {
   );
 }
 
+function IconVolver({ className = "h-5 w-5" }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M15 6l-6 6 6 6" />
+    </svg>
+  );
+}
+
 export default function ChatDashboard({
   esAdmin,
   usuario,
@@ -58,6 +75,7 @@ export default function ChatDashboard({
   const [borrando, setBorrando] = useState(null);
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState("");
+  const [vistaMovil, setVistaMovil] = useState("lista");
   const finalRef = useRef(null);
   const archivoInputRef = useRef(null);
   const cargaConversacionRef = useRef(0);
@@ -281,6 +299,7 @@ export default function ChatDashboard({
     const numeroCarga = cargaConversacionRef.current + 1;
     cargaConversacionRef.current = numeroCarga;
     setEstudianteSeleccionado(estudianteId);
+    setVistaMovil("chat");
     setCargandoConversacion(true);
     setMensajes([]);
     setHayMasMensajes(false);
@@ -520,31 +539,40 @@ export default function ChatDashboard({
     setBorrando(null);
   }
 
+  const mostrarListaMovil = esAdmin && vistaMovil === "lista";
+  const mostrarChatMovil = !esAdmin || vistaMovil === "chat";
+
   return (
-    <>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-accent">Comunicación privada</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
-          Mensajes
-        </h1>
-        <p className="mt-2 text-slate-500">
-          {esAdmin
-            ? "Responde de forma privada a las dudas de tus alumnos."
-            : "Escribe a tu profesora cuando tengas una duda."}
-        </p>
-      </div>
+    <div className="-mb-6 flex h-[calc(100dvh-6rem)] flex-col md:-mb-2 md:h-[calc(100dvh-4.5rem)]">
+      {esAdmin && (
+        <div
+          className={`mb-4 shrink-0 ${vistaMovil === "chat" ? "hidden lg:block" : ""}`}
+        >
+          <p className="text-sm font-medium text-accent">Comunicación privada</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+            Mensajes
+          </h1>
+          <p className="mt-1 hidden text-slate-500 sm:block">
+            Responde de forma privada a las dudas de tus alumnos.
+          </p>
+        </div>
+      )}
 
       <div
-        className={`overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${
-          esAdmin ? "grid min-h-[620px] lg:grid-cols-[280px_minmax(0,1fr)]" : ""
+        className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm ${
+          esAdmin ? "lg:grid lg:grid-cols-[280px_minmax(0,1fr)]" : ""
         }`}
       >
         {esAdmin && (
-          <aside className="border-b border-slate-200 lg:border-b-0 lg:border-r">
-            <div className="border-b border-slate-200 p-4">
+          <aside
+            className={`flex min-h-0 flex-col border-b border-slate-200 lg:border-b-0 lg:border-r ${
+              mostrarListaMovil ? "flex" : "hidden lg:flex"
+            }`}
+          >
+            <div className="shrink-0 border-b border-slate-200 px-4 py-3">
               <h2 className="font-semibold text-slate-900">Alumnos</h2>
             </div>
-            <div className="max-h-64 overflow-y-auto lg:max-h-[560px]">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {conversaciones.map((estudiante) => (
                 <button
                   key={estudiante.id}
@@ -587,18 +615,32 @@ export default function ChatDashboard({
           </aside>
         )}
 
-        <section className="flex min-h-[620px] flex-col">
+        <section
+          className={`flex min-h-0 flex-1 flex-col overflow-hidden ${
+            esAdmin && !mostrarChatMovil ? "hidden lg:flex" : "flex"
+          }`}
+        >
           {estudianteSeleccionado ? (
             <>
-              <header className="flex items-center gap-3 border-b border-slate-200 p-4">
+              <header className="flex shrink-0 items-center gap-3 border-b border-slate-200 px-4 py-3">
+                {esAdmin && (
+                  <button
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+                    type="button"
+                    aria-label="Volver a la lista de alumnos"
+                    onClick={() => setVistaMovil("lista")}
+                  >
+                    <IconVolver />
+                  </button>
+                )}
                 {esAdmin && (
                   <Avatar
                     nombre={estudianteActivo?.nombre}
                     url={estudianteActivo?.avatar_url}
                   />
                 )}
-                <div>
-                  <h2 className="font-semibold text-slate-900">
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate font-semibold text-slate-900">
                     {esAdmin
                       ? estudianteActivo?.nombre
                       : "Conversación con la profesora"}
@@ -610,7 +652,7 @@ export default function ChatDashboard({
               </header>
 
               <div
-                className="flex-1 space-y-3 overflow-y-auto bg-slate-50/60 p-4 sm:p-6"
+                className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-slate-50/60 p-4 sm:p-5"
                 aria-live="polite"
               >
                 {hayMasMensajes && !cargandoConversacion && (
@@ -752,7 +794,7 @@ export default function ChatDashboard({
               </div>
 
               <form
-                className="border-t border-slate-200 bg-white p-4"
+                className="shrink-0 border-t border-slate-200 bg-white p-3 sm:p-4"
                 onSubmit={enviarMensaje}
               >
                 {archivos.length > 0 && (
@@ -836,7 +878,7 @@ export default function ChatDashboard({
               </form>
             </>
           ) : (
-            <div className="flex flex-1 items-center justify-center p-8 text-center text-slate-500">
+            <div className="flex min-h-0 flex-1 items-center justify-center p-8 text-center text-slate-500">
               Selecciona un alumno para abrir la conversación.
             </div>
           )}
@@ -856,6 +898,6 @@ export default function ChatDashboard({
           setErrorEliminar("");
         }}
       />
-    </>
+    </div>
   );
 }

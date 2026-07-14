@@ -1,5 +1,5 @@
-import PageSkeleton from "@/components/PageSkeleton";
+import ProfileSkeleton from "@/components/ProfileSkeleton";
 
 export default function Cargando() {
-  return <PageSkeleton />;
+  return <ProfileSkeleton />;
 }

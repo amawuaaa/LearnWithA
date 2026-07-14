@@ -1,69 +1,30 @@
 "use client";
 
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import EmptyState from "@/components/ui/EmptyState";
+import PageHeader from "@/components/ui/PageHeader";
+import { ordenarAnuncios } from "@/lib/anuncios";
+import { useAnnouncements } from "@/lib/hooks/useAnnouncements";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AdminAnnouncementForm from "./AdminAnnouncementForm";
 import ConfirmDialog from "./ConfirmDialog";
 import Modal from "./Modal";
-
-function ordenar(anuncios) {
-  return [...anuncios].sort(
-    (a, b) => new Date(b.creado_en) - new Date(a.creado_en),
-  );
-}
 
 export default function AnnouncementFeed({
   initialAnnouncements,
   esAdmin,
   usuario,
 }) {
-  const [anuncios, setAnuncios] = useState(initialAnnouncements);
+  const [anuncios, setAnuncios] = useAnnouncements(initialAnnouncements, {
+    canal: "muro-anuncios",
+  });
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState(null);
   const [borrando, setBorrando] = useState(null);
   const [eliminando, setEliminando] = useState(false);
   const [errorBorrado, setErrorBorrado] = useState("");
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    async function sincronizar(payload) {
-      if (payload.eventType === "DELETE") {
-        setAnuncios((actuales) =>
-          actuales.filter((anuncio) => anuncio.id !== payload.old.id),
-        );
-        return;
-      }
-
-      const { data } = await supabase
-        .from("anuncios")
-        .select("*, usuarios(nombre)")
-        .eq("id", payload.new.id)
-        .single();
-
-      if (!data) return;
-
-      setAnuncios((actuales) =>
-        ordenar([
-          data,
-          ...actuales.filter((anuncio) => anuncio.id !== data.id),
-        ]),
-      );
-    }
-
-    const canal = supabase
-      .channel("muro-anuncios")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "anuncios" },
-        sincronizar,
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(canal);
-    };
-  }, []);
 
   function abrirNuevo() {
     setEditando(null);
@@ -72,7 +33,7 @@ export default function AnnouncementFeed({
 
   function guardarLocal(anuncio) {
     setAnuncios((actuales) =>
-      ordenar([
+      ordenarAnuncios([
         anuncio,
         ...actuales.filter((actual) => actual.id !== anuncio.id),
       ]),
@@ -102,39 +63,26 @@ export default function AnnouncementFeed({
 
   return (
     <>
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-accent">Noticias</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">
-            Muro de anuncios
-          </h1>
-          <p className="mt-2 text-slate-500">
-            Novedades y avisos importantes de la clase.
-          </p>
-        </div>
-        {esAdmin && (
-          <button
-            className="shrink-0 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-accent-hover"
-            type="button"
-            onClick={abrirNuevo}
-          >
-            Nuevo anuncio
-          </button>
-        )}
-      </div>
+      <PageHeader
+        etiqueta="Noticias"
+        titulo="Muro de anuncios"
+        descripcion="Novedades y avisos importantes de la clase."
+        accion={
+          esAdmin ? (
+            <Button className="shrink-0" type="button" onClick={abrirNuevo}>
+              Nuevo anuncio
+            </Button>
+          ) : null
+        }
+      />
 
       <div className="space-y-4" aria-live="polite">
         {anuncios.length === 0 && (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
-            Todavía no hay anuncios.
-          </div>
+          <EmptyState>Todavía no hay anuncios.</EmptyState>
         )}
 
         {anuncios.map((anuncio) => (
-          <article
-            key={anuncio.id}
-            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-          >
+          <Card key={anuncio.id} className="p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">
@@ -153,8 +101,8 @@ export default function AnnouncementFeed({
 
               {esAdmin && (
                 <div className="flex gap-2">
-                  <button
-                    className="text-sm font-medium text-accent hover:underline"
+                  <Button
+                    variante="enlace"
                     type="button"
                     onClick={() => {
                       setEditando(anuncio);
@@ -162,9 +110,9 @@ export default function AnnouncementFeed({
                     }}
                   >
                     Editar
-                  </button>
-                  <button
-                    className="text-sm font-medium text-red-600 hover:underline"
+                  </Button>
+                  <Button
+                    variante="enlacePeligro"
                     type="button"
                     onClick={() => {
                       setErrorBorrado("");
@@ -172,14 +120,14 @@ export default function AnnouncementFeed({
                     }}
                   >
                     Eliminar
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
             <p className="mt-4 whitespace-pre-wrap leading-7 text-slate-700">
               {anuncio.contenido}
             </p>
-          </article>
+          </Card>
         ))}
       </div>
 
