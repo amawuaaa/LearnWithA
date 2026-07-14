@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Avatar from "./Avatar";
 import {
   IconAnuncios,
@@ -32,20 +32,67 @@ const enlaces = [
   },
 ];
 
+// Doble tono corto y suave. Si el navegador bloquea el audio (por ejemplo,
+// antes de la primera interacción con la página), simplemente no suena.
+function sonarAviso() {
+  try {
+    const contexto = new (window.AudioContext ?? window.webkitAudioContext)();
+    const oscilador = contexto.createOscillator();
+    const volumen = contexto.createGain();
+    oscilador.connect(volumen);
+    volumen.connect(contexto.destination);
+    oscilador.type = "sine";
+    oscilador.frequency.setValueAtTime(740, contexto.currentTime);
+    oscilador.frequency.setValueAtTime(988, contexto.currentTime + 0.15);
+    volumen.gain.setValueAtTime(0.04, contexto.currentTime);
+    volumen.gain.exponentialRampToValueAtTime(
+      0.001,
+      contexto.currentTime + 0.4,
+    );
+    oscilador.start();
+    oscilador.stop(contexto.currentTime + 0.4);
+    oscilador.onended = () => contexto.close();
+  } catch {
+    // Sin sonido si el navegador lo impide.
+  }
+}
+
 export default function Sidebar({ perfil, mensajesNoLeidos = 0 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [abierto, setAbierto] = useState(false);
   const [noLeidos, setNoLeidos] = useState(mensajesNoLeidos);
+  const noLeidosRef = useRef(mensajesNoLeidos);
 
   useEffect(() => {
     setNoLeidos(mensajesNoLeidos);
   }, [mensajesNoLeidos]);
 
   useEffect(() => {
+    noLeidosRef.current = noLeidos;
+  }, [noLeidos]);
+
+  // Refleja los no leídos en el título de la pestaña: "(3) LearnWithA".
+  useEffect(() => {
+    document.title =
+      noLeidos > 0
+        ? `(${noLeidos > 99 ? "99+" : noLeidos}) LearnWithA`
+        : "LearnWithA";
+
+    return () => {
+      document.title = "LearnWithA";
+    };
+  }, [noLeidos]);
+
+  useEffect(() => {
+    // En /mensajes el chat ya sincroniza en tiempo real y marca como leído;
+    // no hace falta un segundo canal. Al salir, este efecto se vuelve a
+    // ejecutar y la consulta inicial resincroniza el contador.
+    if (pathname === "/mensajes") return undefined;
+
     const supabase = createClient();
 
-    async function actualizarNoLeidos() {
+    async function actualizarNoLeidos({ avisar = false } = {}) {
       let consulta = supabase
         .from("mensajes")
         .select("id", { count: "exact", head: true })
@@ -57,22 +104,38 @@ export default function Sidebar({ perfil, mensajesNoLeidos = 0 }) {
       }
 
       const { count } = await consulta;
-      if (count !== null) setNoLeidos(count);
+      if (count === null) return;
+
+      if (avisar && count > noLeidosRef.current && document.hidden) {
+        sonarAviso();
+      }
+      setNoLeidos(count);
     }
+
+    actualizarNoLeidos();
+
+    // Los alumnos solo escuchan los cambios de su propia conversación; la
+    // profesora necesita toda la tabla para el contador global.
+    const filtro = {
+      event: "*",
+      schema: "public",
+      table: "mensajes",
+      ...(perfil.rol !== "admin" && {
+        filter: `estudiante_id=eq.${perfil.id}`,
+      }),
+    };
 
     const canal = supabase
       .channel(`sidebar-mensajes-${perfil.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "mensajes" },
-        actualizarNoLeidos,
+      .on("postgres_changes", filtro, () =>
+        actualizarNoLeidos({ avisar: true }),
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(canal);
     };
-  }, [perfil.id, perfil.rol]);
+  }, [perfil.id, perfil.rol, pathname]);
 
   async function cerrarSesion() {
     const supabase = createClient();
@@ -117,9 +180,18 @@ export default function Sidebar({ perfil, mensajesNoLeidos = 0 }) {
                 <enlace.Icono className="h-4 w-4" />
               </span>
               <span className="flex-1">{enlace.etiqueta}</span>
-              {enlace.href === "/mensajes" && noLeidos > 0 && (
-                <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
-                  {noLeidos > 99 ? "99+" : noLeidos}
+              {enlace.href === "/mensajes" && (
+                <span aria-live="polite" aria-atomic="true">
+                  {noLeidos > 0 && (
+                    <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
+                      {noLeidos > 99 ? "99+" : noLeidos}
+                      <span className="sr-only">
+                        {noLeidos === 1
+                          ? " mensaje sin leer"
+                          : " mensajes sin leer"}
+                      </span>
+                    </span>
+                  )}
                 </span>
               )}
             </Link>
