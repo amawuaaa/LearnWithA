@@ -1,5 +1,6 @@
 "use client";
 
+import ImageLightbox from "@/components/ImageLightbox";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 
@@ -12,6 +13,7 @@ function formatearTamano(bytes) {
 export default function ChatAttachment({ adjunto, propio }) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState(false);
+  const [imagenAmpliada, setImagenAmpliada] = useState(false);
   const esImagen = adjunto.tipo?.startsWith("image/");
 
   useEffect(() => {
@@ -57,15 +59,28 @@ export default function ChatAttachment({ adjunto, propio }) {
 
   if (esImagen) {
     return (
-      <a href={url} target="_blank" rel="noreferrer">
-        {/* Las imágenes usan enlaces privados temporales de Supabase. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className="max-h-72 w-full rounded-lg object-cover"
+      <>
+        <button
+          type="button"
+          className="block w-full overflow-hidden rounded-lg transition hover:opacity-90"
+          onClick={() => setImagenAmpliada(true)}
+          aria-label={`Ver imagen: ${adjunto.nombre}`}
+        >
+          {/* Las imágenes usan enlaces privados temporales de Supabase. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className="max-h-72 w-full rounded-lg object-cover"
+            src={url}
+            alt={adjunto.nombre}
+          />
+        </button>
+        <ImageLightbox
+          abierto={imagenAmpliada}
           src={url}
           alt={adjunto.nombre}
+          onClose={() => setImagenAmpliada(false)}
         />
-      </a>
+      </>
     );
   }
 
