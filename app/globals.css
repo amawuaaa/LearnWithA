@@ -19,7 +19,15 @@
   --font-sans: var(--font-inter);
 }
 
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
+  overflow-x: hidden;
+  max-width: 100%;
+  touch-action: manipulation;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
@@ -32,5 +40,13 @@ body {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-muted);
     outline: none;
+  }
+
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    textarea,
+    select {
+      font-size: 16px;
+    }
   }
 }

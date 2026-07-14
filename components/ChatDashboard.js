@@ -691,7 +691,7 @@ export default function ChatDashboard({
                         {editando === mensaje.id ? (
                           <div>
                             <textarea
-                              className="h-24 w-full min-w-56 resize-none rounded-lg border border-teal-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-accent-muted"
+                              className="h-24 w-full min-w-0 max-w-full resize-none rounded-lg border border-teal-200 bg-white px-3 py-2 text-base text-slate-800 outline-none focus:ring-2 focus:ring-accent-muted sm:text-sm"
                               value={textoEdicion}
                               onChange={(event) =>
                                 setTextoEdicion(event.target.value)
@@ -830,7 +830,7 @@ export default function ChatDashboard({
                   </label>
                   <textarea
                     id="nuevo-mensaje"
-                    className="h-12 min-w-0 flex-1 resize-none rounded-lg border border-slate-300 px-3 py-3 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent-muted"
+                    className="h-12 min-w-0 flex-1 resize-none rounded-lg border border-slate-300 px-3 py-3 text-base outline-none focus:border-accent focus:ring-2 focus:ring-accent-muted sm:text-sm"
                     value={contenido}
                     onChange={(event) => setContenido(event.target.value)}
                     placeholder="Escribe un mensaje…"
