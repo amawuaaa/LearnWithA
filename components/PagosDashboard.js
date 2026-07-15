@@ -1,7 +1,7 @@
 "use client";
 
 import PageHeader from "@/components/ui/PageHeader";
-import PerfilMensualidades from "@/components/perfil/PerfilMensualidades";
+import MensualidadesPanel from "@/components/pagos/MensualidadesPanel";
 import useMensualidades from "@/lib/hooks/useMensualidades";
 
 export default function PagosDashboard({
@@ -24,7 +24,7 @@ export default function PagosDashboard({
         }
       />
 
-      <PerfilMensualidades
+      <MensualidadesPanel
         esAdmin={esAdmin}
         mensualidades={mensualidades}
         estudiantes={estudiantes}

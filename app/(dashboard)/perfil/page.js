@@ -12,17 +12,6 @@ export default async function PerfilPage() {
       .select("id", { count: "exact", head: true }),
   ];
 
-  if (!esAdmin) {
-    consultas.push(
-      supabase
-        .from("mensualidades")
-        .select("importe, estado, periodo")
-        .order("periodo", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    );
-  }
-
   if (esAdmin) {
     consultas.push(
       supabase
@@ -38,27 +27,16 @@ export default async function PerfilPage() {
     );
   }
 
-  const resultados = await Promise.all(consultas);
-  const progresoResult = resultados[0];
-  let ultimaMensualidad = null;
-  let estudiantes = [];
-  let codigoRegistro = null;
-
-  if (!esAdmin) {
-    ultimaMensualidad = resultados[1]?.data ?? null;
-  } else {
-    estudiantes = resultados[1]?.data ?? [];
-    codigoRegistro = resultados[2]?.data ?? null;
-  }
+  const [progresoResult, estudiantesResult, codigoRegistroResult] =
+    await Promise.all(consultas);
 
   return (
     <ProfileDashboard
       usuario={{ id: user.id, email: user.email }}
       perfil={perfil}
-      ultimaMensualidad={ultimaMensualidad}
-      estudiantes={estudiantes}
+      estudiantes={estudiantesResult?.data ?? []}
       testsCompletados={progresoResult.count ?? 0}
-      codigoRegistro={codigoRegistro}
+      codigoRegistro={codigoRegistroResult?.data ?? null}
     />
   );
 }

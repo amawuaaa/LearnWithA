@@ -1,9 +1,12 @@
 "use client";
 
 import Button from "@/components/ui/Button";
-import { estilosEstadoMensualidad as estilosEstado } from "@/lib/mensualidades";
-import AdminBulkMonthlyForm from "../AdminBulkMonthlyForm";
-import AdminMonthlyForm from "../AdminMonthlyForm";
+import {
+  estilosEstadoMensualidad as estilosEstado,
+  importeLegible,
+} from "@/lib/mensualidades";
+import AdminBulkMonthlyForm from "./AdminBulkMonthlyForm";
+import AdminMonthlyForm from "./AdminMonthlyForm";
 import ConfirmDialog from "../ConfirmDialog";
 import Modal from "../Modal";
 
@@ -13,13 +16,6 @@ function fechaLegible(fecha, opciones = {}) {
 
 function periodoLegible(periodo) {
   return fechaLegible(periodo, { month: "long", year: "numeric" });
-}
-
-function importeLegible(importe) {
-  return new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-  }).format(importe);
 }
 
 function EstadoMensualidad({ estado }) {
@@ -165,7 +161,7 @@ function GestionAdmin({ mensualidades, estudiantes, dashboard }) {
   );
 }
 
-export default function PerfilMensualidades({
+export default function MensualidadesPanel({
   esAdmin,
   mensualidades,
   estudiantes,
@@ -212,5 +208,3 @@ export default function PerfilMensualidades({
     </>
   );
 }
-
-export { importeLegible };

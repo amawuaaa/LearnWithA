@@ -16,6 +16,7 @@
     "verify:migrations": "node scripts/verificar-migraciones.mjs",
     "db:migrate": "node scripts/aplicar-migracion.mjs",
     "db:migrate:027": "node scripts/aplicar-migracion.mjs 027",
+    "db:migrate:028": "node scripts/aplicar-migracion.mjs 028",
     "db:verify:migration": "node scripts/verificar-migracion-remota.mjs"
   },
   "dependencies": {

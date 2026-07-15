@@ -47,6 +47,7 @@ En el editor SQL de Supabase, abre cada archivo pendiente y ejecútalo. La tabla
 | 025 | `025_clases_por_estudiante.sql` | Tabla `clases_estudiante` + backfill 8 semanas. |
 | 026 | `026_generar_clases_mes.sql` | RPC `generar_clases_mes` (extender calendario por mes). |
 | 027 | `027_perfiles_visibles.sql` | Restringe lectura de perfiles: propio, admin y profesora. |
+| 028 | `028_asignaciones_contenido.sql` | Asigna tests/lecciones a alumnos concretos (desbloqueo aparte del nivel). |
 
 ## RPC de administración
 
@@ -55,6 +56,7 @@ En el editor SQL de Supabase, abre cada archivo pendiente y ejecútalo. La tabla
 | `generar_mensualidades_mes(periodo, importe, vencimiento)` | Crea mensualidades del mes para todos los alumnos. |
 | `generar_clases_mes(mes, estudiante_id?)` | Genera clases del mes según el patrón semanal de cada alumno (últimos 90 días o `horario_clases` como respaldo). |
 | `guardar_mensualidad_admin(...)` | Alta/edición puntual de una mensualidad. |
+| `guardar_asignaciones_contenido(tipo, test_id, leccion_id, estudiante_ids)` | Sustituye la lista de alumnos asignados a un test o lección. |
 | `actualizar_nivel_estudiante(estudiante_id, nivel)` | Cambia el nivel CEFR de un alumno. |
 
 ## Sincronizar `schema.sql`
@@ -65,7 +67,7 @@ Tras añadir una migración nueva:
 2. Añade la fila correspondiente en este documento.
 3. Ejecuta la migración en Supabase (producción / staging).
 
-La app asume que la base de datos está al día con la migración **027** como mínimo (privacidad de perfiles y calendario por alumno).
+La app asume que la base de datos está al día con la migración **028** como mínimo (asignaciones de contenido por alumno).
 
 ## Verificación automática
 

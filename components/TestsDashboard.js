@@ -1,10 +1,11 @@
 "use client";
 
-import { nivelBadgeClase, nivelDesbloqueado } from "@/lib/niveles";
+import { nivelBadgeClase } from "@/lib/niveles";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import AdminTestForm from "./AdminTestForm";
+import AsignarContenidoModal from "./AsignarContenidoModal";
 import ConfirmDialog from "./ConfirmDialog";
 import Modal from "./Modal";
 import TestPlayer from "./TestPlayer";
@@ -16,8 +17,9 @@ import PageHeader from "./ui/PageHeader";
 export default function TestsDashboard({
   tests,
   esAdmin,
-  nivelUsuario,
   resultados,
+  estudiantes = [],
+  asignacionesPorTest = {},
 }) {
   const router = useRouter();
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -25,6 +27,7 @@ export default function TestsDashboard({
   const [borrando, setBorrando] = useState(null);
   const [eliminando, setEliminando] = useState(false);
   const [errorBorrado, setErrorBorrado] = useState("");
+  const [asignando, setAsignando] = useState(null);
 
   function abrir(test = null) {
     setEditando(test);
@@ -60,7 +63,7 @@ export default function TestsDashboard({
         titulo="Tests"
         descripcion={
           esAdmin
-            ? "Gestiona los tests y consulta los resultados."
+            ? "Gestiona los tests, asígnalos a alumnos y consulta resultados."
             : "Responde los mini-tests y comprueba tu progreso."
         }
         accion={
@@ -76,44 +79,65 @@ export default function TestsDashboard({
         <EmptyState>Todavía no hay tests disponibles.</EmptyState>
       ) : esAdmin ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {tests.map((test) => (
-            <Card key={test.id} className="p-5">
-              <span className={nivelBadgeClase(test.nivel)}>
-                Nivel {test.nivel}
-              </span>
-              <h2 className="mt-2 font-semibold text-slate-900">
-                {test.titulo}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {test.preguntas.length} preguntas
-              </p>
-              <div className="mt-5 flex gap-3">
-                <button
-                  className="text-sm font-medium text-accent hover:underline"
-                  type="button"
-                  onClick={() => abrir(test)}
-                >
-                  Editar
-                </button>
-                <button
-                  className="text-sm font-medium text-red-600 hover:underline"
-                  type="button"
-                  onClick={() => {
-                    setErrorBorrado("");
-                    setBorrando(test);
-                  }}
-                >
-                  Eliminar
-                </button>
-              </div>
-            </Card>
-          ))}
+          {tests.map((test) => {
+            const asignados = asignacionesPorTest[test.id] ?? [];
+            return (
+              <Card key={test.id} className="p-5">
+                <span className={nivelBadgeClase(test.nivel)}>
+                  Nivel {test.nivel}
+                </span>
+                <h2 className="mt-2 font-semibold text-slate-900">
+                  {test.titulo}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {test.preguntas.length} preguntas
+                  {asignados.length > 0
+                    ? ` · ${asignados.length} asignado${asignados.length === 1 ? "" : "s"}`
+                    : ""}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    className="text-sm font-medium text-accent hover:underline"
+                    type="button"
+                    onClick={() => abrir(test)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    className="text-sm font-medium text-accent hover:underline"
+                    type="button"
+                    onClick={() => setAsignando(test)}
+                  >
+                    Asignar
+                  </button>
+                  <button
+                    className="text-sm font-medium text-red-600 hover:underline"
+                    type="button"
+                    onClick={() => {
+                      setErrorBorrado("");
+                      setBorrando(test);
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <div className="space-y-4">
-          {tests.map((test) =>
-            nivelDesbloqueado(test.nivel, nivelUsuario) ? (
-              <TestPlayer key={test.id} test={test} />
+          {tests.map((test) => {
+            const desbloqueado = Array.isArray(test.preguntas);
+            return desbloqueado ? (
+              <div key={test.id}>
+                {test.asignado && (
+                  <p className="mb-2 text-xs font-medium text-accent">
+                    Asignado para ti
+                  </p>
+                )}
+                <TestPlayer test={test} />
+              </div>
             ) : (
               <article
                 key={test.id}
@@ -121,21 +145,22 @@ export default function TestsDashboard({
               >
                 <div>
                   <span className={nivelBadgeClase(test.nivel)}>
-                Nivel {test.nivel}
-              </span>
+                    Nivel {test.nivel}
+                  </span>
                   <h2 className="mt-2 font-semibold text-slate-500">
                     {test.titulo}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Se desbloquea al alcanzar el nivel {test.nivel}.
+                    Se desbloquea al alcanzar el nivel {test.nivel} o si te lo
+                    asignan.
                   </p>
                 </div>
                 <span aria-hidden="true" className="text-2xl">
                   🔒
                 </span>
               </article>
-            ),
-          )}
+            );
+          })}
         </div>
       )}
 
@@ -205,6 +230,22 @@ export default function TestsDashboard({
           onSaved={guardado}
         />
       </Modal>
+
+      <AsignarContenidoModal
+        abierto={asignando !== null}
+        onClose={() => setAsignando(null)}
+        onSaved={() => {
+          setAsignando(null);
+          router.refresh();
+        }}
+        tipo="test"
+        contenidoId={asignando?.id}
+        titulo={asignando?.titulo ?? ""}
+        estudiantes={estudiantes}
+        idsIniciales={
+          asignando ? (asignacionesPorTest[asignando.id] ?? []) : []
+        }
+      />
 
       <ConfirmDialog
         abierto={borrando !== null}

@@ -1,18 +1,15 @@
 "use client";
 
 import PageHeader from "@/components/ui/PageHeader";
-import { estilosEstadoMensualidad as estilosEstado } from "@/lib/mensualidades";
 import useProfileDashboard from "@/lib/hooks/useProfileDashboard";
 import Link from "next/link";
 import PerfilAvatar from "./perfil/PerfilAvatar";
 import PerfilCodigoRegistro from "./perfil/PerfilCodigoRegistro";
 import PerfilListaAlumnos from "./perfil/PerfilListaAlumnos";
-import { importeLegible } from "./perfil/PerfilMensualidades";
 
 export default function ProfileDashboard({
   usuario,
   perfil,
-  ultimaMensualidad,
   estudiantes,
   testsCompletados,
   codigoRegistro,
@@ -50,44 +47,20 @@ export default function ProfileDashboard({
                 </p>
               </div>
             )}
-            {!esAdmin && (
-              <div className="border-t border-slate-100 pt-5">
-                <p className="text-sm text-slate-500">Última mensualidad</p>
-                {ultimaMensualidad ? (
-                  <>
-                    <p className="mt-1 text-2xl font-semibold text-slate-900">
-                      {importeLegible(ultimaMensualidad.importe)}
-                    </p>
-                    <span
-                      className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-medium capitalize ${estilosEstado[ultimaMensualidad.estado]}`}
-                    >
-                      {ultimaMensualidad.estado}
-                    </span>
-                  </>
-                ) : (
-                  <p className="mt-1 text-sm text-slate-500">
-                    Sin mensualidades registradas
-                  </p>
-                )}
-                <Link
-                  href="/pagos"
-                  className="mt-3 inline-block text-sm font-medium text-accent hover:underline"
-                >
-                  Ver todos los pagos
-                </Link>
-              </div>
-            )}
-            {esAdmin && (
-              <div className="border-t border-slate-100 pt-5">
-                <p className="text-sm text-slate-500">Mensualidades</p>
-                <Link
-                  href="/pagos"
-                  className="mt-2 inline-block text-sm font-medium text-accent hover:underline"
-                >
-                  Ir a gestión de pagos
-                </Link>
-              </div>
-            )}
+            <div className="border-t border-slate-100 pt-5">
+              <p className="text-sm text-slate-500">Mensualidades</p>
+              <p className="mt-1 text-sm text-slate-600">
+                {esAdmin
+                  ? "Gestiona importes y estados en la sección de pagos."
+                  : "Consulta tus pagos en la sección dedicada."}
+              </p>
+              <Link
+                href="/pagos"
+                className="mt-3 inline-block text-sm font-medium text-accent hover:underline"
+              >
+                Ir a pagos
+              </Link>
+            </div>
           </div>
         </aside>
       </div>

@@ -17,9 +17,7 @@ test.describe("Perfil y calendario (alumno)", () => {
     await expect(page.getByText("Cambiar foto")).toBeVisible();
     await expect(page.getByRole("button", { name: "Editar nombre" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Ver todos los pagos" }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ir a pagos" })).toBeVisible();
 
     // Edición de nombre: abre y cancela sin guardar.
     await page.getByRole("button", { name: "Editar nombre" }).click();

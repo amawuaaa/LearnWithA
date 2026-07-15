@@ -178,6 +178,12 @@ export default function HomeDashboard({
                       Sin mensualidades registradas
                     </p>
                   )}
+                  <Link
+                    href="/pagos"
+                    className="mt-3 inline-block text-sm font-medium text-accent hover:underline"
+                  >
+                    Ver pagos
+                  </Link>
                 </div>
               </>
             )}
