@@ -38,5 +38,7 @@ test.describe("Panel de progreso", () => {
     await expect(
       page.getByRole("heading", { name: "Progreso de los alumnos" }),
     ).toBeVisible();
+    await expect(page.getByLabel("Buscar alumno")).toBeVisible();
+    await expect(page.getByLabel("Ordenar")).toBeVisible();
   });
 });

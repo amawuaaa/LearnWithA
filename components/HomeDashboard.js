@@ -7,6 +7,7 @@ import {
   IconCalendario,
   IconMemoria,
   IconMensajes,
+  IconPagos,
   IconPerfil,
   IconTests,
   IconVocabulario,
@@ -50,9 +51,15 @@ const accesos = [
     Icono: IconMemoria,
   },
   {
+    href: "/pagos",
+    etiqueta: "Pagos",
+    descripcion: "Consulta tus mensualidades",
+    Icono: IconPagos,
+  },
+  {
     href: "/perfil",
     etiqueta: "Mi perfil",
-    descripcion: "Tus datos y mensualidades",
+    descripcion: "Tus datos personales",
     Icono: IconPerfil,
   },
 ];

@@ -8,13 +8,20 @@ export default async function PerfilPage() {
   const esAdmin = perfil.rol === "admin";
   const consultas = [
     supabase
-      .from("mensualidades")
-      .select("*, usuarios(nombre)")
-      .order("periodo", { ascending: false }),
-    supabase
       .from("estudiantes_progreso")
       .select("id", { count: "exact", head: true }),
   ];
+
+  if (!esAdmin) {
+    consultas.push(
+      supabase
+        .from("mensualidades")
+        .select("importe, estado, periodo")
+        .order("periodo", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    );
+  }
 
   if (esAdmin) {
     consultas.push(
@@ -31,27 +38,27 @@ export default async function PerfilPage() {
     );
   }
 
-  const [
-    mensualidadesResult,
-    progresoResult,
-    estudiantesResult,
-    codigoRegistroResult,
-  ] =
-    await Promise.all(consultas);
+  const resultados = await Promise.all(consultas);
+  const progresoResult = resultados[0];
+  let ultimaMensualidad = null;
+  let estudiantes = [];
+  let codigoRegistro = null;
+
+  if (!esAdmin) {
+    ultimaMensualidad = resultados[1]?.data ?? null;
+  } else {
+    estudiantes = resultados[1]?.data ?? [];
+    codigoRegistro = resultados[2]?.data ?? null;
+  }
 
   return (
     <ProfileDashboard
       usuario={{ id: user.id, email: user.email }}
       perfil={perfil}
-      mensualidades={mensualidadesResult.data ?? []}
-      mensualidadesError={
-        mensualidadesResult.error
-          ? "No se pudieron cargar las mensualidades. Comprueba que la tabla existe en Supabase."
-          : null
-      }
-      estudiantes={estudiantesResult?.data ?? []}
+      ultimaMensualidad={ultimaMensualidad}
+      estudiantes={estudiantes}
       testsCompletados={progresoResult.count ?? 0}
-      codigoRegistro={codigoRegistroResult?.data ?? null}
+      codigoRegistro={codigoRegistro}
     />
   );
 }

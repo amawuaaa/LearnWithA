@@ -1,5 +1,13 @@
+"use client";
+
 import PageHeader from "@/components/ui/PageHeader";
-import { nivelBadgeClase } from "@/lib/niveles";
+import { NIVELES, nivelBadgeClase } from "@/lib/niveles";
+import {
+  contarActividad,
+  fechaUltimaActividad,
+  filtrarYOrdenarAlumnos,
+} from "@/lib/progreso";
+import { useMemo, useState } from "react";
 
 function fechaCorta(fecha) {
   return new Date(fecha).toLocaleDateString("es-ES", {
@@ -80,60 +88,177 @@ function metricasTest(test) {
   return [
     {
       etiqueta: "Nota",
-      valor: test.total ? `${test.puntuacion}/${test.total}` : String(test.puntuacion),
+      valor: test.total
+        ? `${test.puntuacion}/${test.total}`
+        : String(test.puntuacion),
     },
-    {
-      etiqueta: "Intentos",
-      valor: String(test.intentos),
-    },
-    {
-      etiqueta: "Fecha",
-      valor: fechaCorta(test.completado_en),
-    },
+    { etiqueta: "Intentos", valor: String(test.intentos) },
+    { etiqueta: "Fecha", valor: fechaCorta(test.completado_en) },
   ];
 }
 
 function metricasLeccion(leccion) {
   return [
-    {
-      etiqueta: "Nota",
-      valor: `${leccion.puntuacion}/${leccion.total}`,
-    },
-    {
-      etiqueta: "Intentos",
-      valor: String(leccion.intentos),
-    },
-    {
-      etiqueta: "Fecha",
-      valor: fechaCorta(leccion.completado_en),
-    },
+    { etiqueta: "Nota", valor: `${leccion.puntuacion}/${leccion.total}` },
+    { etiqueta: "Intentos", valor: String(leccion.intentos) },
+    { etiqueta: "Fecha", valor: fechaCorta(leccion.completado_en) },
   ];
 }
 
 function metricasMemoria(juego) {
   return [
-    {
-      etiqueta: "Mejor",
-      valor: `${juego.mejorIntentos} intentos`,
-    },
-    {
-      etiqueta: "Partidas",
-      valor: String(juego.partidas),
-    },
-    {
-      etiqueta: "Última",
-      valor: fechaCorta(juego.ultimaFecha),
-    },
+    { etiqueta: "Mejor", valor: `${juego.mejorIntentos} intentos` },
+    { etiqueta: "Partidas", valor: String(juego.partidas) },
+    { etiqueta: "Última", valor: fechaCorta(juego.ultimaFecha) },
   ];
 }
 
+function TarjetaAlumno({ alumno, expandido, onToggle }) {
+  const contadores = contarActividad(alumno);
+  const ultima = fechaUltimaActividad(alumno);
+  const sinActividad = contadores.total === 0;
+
+  return (
+    <article className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expandido}
+        className="flex w-full items-start gap-3 p-4 text-left sm:p-5"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="min-w-0 text-base font-semibold text-slate-900 sm:text-lg">
+              {alumno.nombre}
+            </h2>
+            <span className={nivelBadgeClase(alumno.nivel)}>
+              Nivel {alumno.nivel ?? "A1"}
+            </span>
+            {sinActividad && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 ring-1 ring-amber-200/80">
+                Sin actividad
+              </span>
+            )}
+          </div>
+
+          {sinActividad ? (
+            <p className="mt-2 text-sm text-slate-400">
+              Todavía no ha completado tests, lecciones ni memoria.
+            </p>
+          ) : (
+            <>
+              <ResumenAlumno
+                tests={contadores.tests}
+                lecciones={contadores.lecciones}
+                partidasMemoria={contadores.partidasMemoria}
+              />
+              {ultima && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Última actividad: {fechaCorta(ultima)}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+        <span
+          className={`mt-1 shrink-0 text-slate-400 transition ${expandido ? "rotate-180" : ""}`}
+          aria-hidden
+        >
+          ▾
+        </span>
+      </button>
+
+      {expandido && !sinActividad && (
+        <div className="space-y-4 border-t border-slate-100 px-4 py-4 sm:space-y-5 sm:px-5 sm:pb-5">
+          <Seccion titulo="Tests" vacio={alumno.tests.length === 0}>
+            {alumno.tests.map((test, indice) => (
+              <FilaActividad
+                key={indice}
+                titulo={test.titulo}
+                metricas={metricasTest(test)}
+              />
+            ))}
+          </Seccion>
+
+          <Seccion titulo="Vocabulario" vacio={alumno.lecciones.length === 0}>
+            {alumno.lecciones.map((leccion, indice) => (
+              <FilaActividad
+                key={indice}
+                titulo={leccion.titulo}
+                metricas={metricasLeccion(leccion)}
+              />
+            ))}
+          </Seccion>
+
+          <Seccion titulo="Memoria" vacio={alumno.memoria.length === 0}>
+            {alumno.memoria.map((juego, indice) => (
+              <FilaActividad
+                key={indice}
+                titulo={juego.titulo}
+                metricas={metricasMemoria(juego)}
+              />
+            ))}
+          </Seccion>
+        </div>
+      )}
+    </article>
+  );
+}
+
+const estilosCampo =
+  "rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-accent focus:ring-2 focus:ring-accent-muted";
+
 export default function ProgresoDashboard({ alumnos }) {
+  const [busqueda, setBusqueda] = useState("");
+  const [nivel, setNivel] = useState("todos");
+  const [orden, setOrden] = useState("nombre");
+  const [expandidos, setExpandidos] = useState(() => new Set());
+
+  const filtrados = useMemo(
+    () => filtrarYOrdenarAlumnos(alumnos, { busqueda, nivel, orden }),
+    [alumnos, busqueda, nivel, orden],
+  );
+
+  const resumen = useMemo(() => {
+    const conActividad = alumnos.filter(
+      (alumno) => contarActividad(alumno).total > 0,
+    ).length;
+    return {
+      total: alumnos.length,
+      conActividad,
+      sinActividad: alumnos.length - conActividad,
+    };
+  }, [alumnos]);
+
+  function toggleAlumno(id) {
+    setExpandidos((prev) => {
+      const siguiente = new Set(prev);
+      if (siguiente.has(id)) siguiente.delete(id);
+      else siguiente.add(id);
+      return siguiente;
+    });
+  }
+
+  function expandirTodos() {
+    setExpandidos(
+      new Set(
+        filtrados
+          .filter((alumno) => contarActividad(alumno).total > 0)
+          .map((alumno) => alumno.id),
+      ),
+    );
+  }
+
+  function plegarTodos() {
+    setExpandidos(new Set());
+  }
+
   return (
     <>
       <PageHeader
         etiqueta="Seguimiento"
         titulo="Progreso de los alumnos"
-        descripcion="Tests, lecciones de vocabulario y juegos de memoria completados por cada alumno."
+        descripcion="Busca, filtra y revisa tests, vocabulario y memoria de cada alumno."
         className="mb-6 sm:mb-8"
       />
 
@@ -142,81 +267,105 @@ export default function ProgresoDashboard({ alumnos }) {
           Aún no hay alumnos registrados.
         </div>
       ) : (
-        <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
-          {alumnos.map((alumno) => {
-            const partidasMemoria = alumno.memoria.reduce(
-              (suma, juego) => suma + juego.partidas,
-              0,
-            );
-            const totalActividad =
-              alumno.tests.length + alumno.lecciones.length + partidasMemoria;
+        <>
+          <div className="mb-5 flex flex-wrap gap-3 text-sm">
+            <p className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
+              <span className="font-semibold text-slate-900">
+                {resumen.total}
+              </span>{" "}
+              <span className="text-slate-500">alumnos</span>
+            </p>
+            <p className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
+              <span className="font-semibold text-emerald-700">
+                {resumen.conActividad}
+              </span>{" "}
+              <span className="text-slate-500">con actividad</span>
+            </p>
+            <p className="rounded-lg bg-white px-3 py-2 ring-1 ring-slate-200">
+              <span className="font-semibold text-amber-700">
+                {resumen.sinActividad}
+              </span>{" "}
+              <span className="text-slate-500">sin actividad</span>
+            </p>
+          </div>
 
-            return (
-              <article
-                key={alumno.id}
-                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6"
+          <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:flex-wrap sm:items-end">
+            <label className="block min-w-[12rem] flex-1 text-sm font-medium text-slate-700">
+              Buscar alumno
+              <input
+                className={`mt-1.5 w-full ${estilosCampo}`}
+                type="search"
+                value={busqueda}
+                onChange={(event) => setBusqueda(event.target.value)}
+                placeholder="Nombre…"
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Nivel
+              <select
+                className={`mt-1.5 w-full sm:w-36 ${estilosCampo}`}
+                value={nivel}
+                onChange={(event) => setNivel(event.target.value)}
               >
-                <header className="mb-4 border-b border-slate-100 pb-4 sm:mb-5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="min-w-0 flex-1 text-base font-semibold text-slate-900 sm:text-lg">
-                      {alumno.nombre}
-                    </h2>
-                    <span className={nivelBadgeClase(alumno.nivel)}>
-                      Nivel {alumno.nivel ?? "A1"}
-                    </span>
-                  </div>
+                <option value="todos">Todos</option>
+                {NIVELES.map((valor) => (
+                  <option key={valor} value={valor}>
+                    {valor}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-                  {totalActividad === 0 ? (
-                    <p className="mt-2 text-sm text-slate-400">
-                      Sin actividad registrada
-                    </p>
-                  ) : (
-                    <ResumenAlumno
-                      tests={alumno.tests.length}
-                      lecciones={alumno.lecciones.length}
-                      partidasMemoria={partidasMemoria}
-                    />
-                  )}
-                </header>
+            <label className="block text-sm font-medium text-slate-700">
+              Ordenar
+              <select
+                className={`mt-1.5 w-full sm:w-48 ${estilosCampo}`}
+                value={orden}
+                onChange={(event) => setOrden(event.target.value)}
+              >
+                <option value="nombre">Nombre (A–Z)</option>
+                <option value="actividad">Más actividad</option>
+                <option value="inactivos">Sin actividad primero</option>
+                <option value="reciente">Actividad reciente</option>
+              </select>
+            </label>
 
-                <div className="space-y-4 sm:space-y-5">
-                  <Seccion titulo="Tests" vacio={alumno.tests.length === 0}>
-                    {alumno.tests.map((test, indice) => (
-                      <FilaActividad
-                        key={indice}
-                        titulo={test.titulo}
-                        metricas={metricasTest(test)}
-                      />
-                    ))}
-                  </Seccion>
+            <div className="flex gap-2 sm:ml-auto">
+              <button
+                type="button"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                onClick={expandirTodos}
+              >
+                Expandir
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                onClick={plegarTodos}
+              >
+                Plegar
+              </button>
+            </div>
+          </div>
 
-                  <Seccion
-                    titulo="Vocabulario"
-                    vacio={alumno.lecciones.length === 0}
-                  >
-                    {alumno.lecciones.map((leccion, indice) => (
-                      <FilaActividad
-                        key={indice}
-                        titulo={leccion.titulo}
-                        metricas={metricasLeccion(leccion)}
-                      />
-                    ))}
-                  </Seccion>
-
-                  <Seccion titulo="Memoria" vacio={alumno.memoria.length === 0}>
-                    {alumno.memoria.map((juego, indice) => (
-                      <FilaActividad
-                        key={indice}
-                        titulo={juego.titulo}
-                        metricas={metricasMemoria(juego)}
-                      />
-                    ))}
-                  </Seccion>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+          {filtrados.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
+              Ningún alumno coincide con el filtro.
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+              {filtrados.map((alumno) => (
+                <TarjetaAlumno
+                  key={alumno.id}
+                  alumno={alumno}
+                  expandido={expandidos.has(alumno.id)}
+                  onToggle={() => toggleAlumno(alumno.id)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </>
   );

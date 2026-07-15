@@ -11,6 +11,7 @@ import {
   IconInicio,
   IconMemoria,
   IconMensajes,
+  IconPagos,
   IconProgreso,
   IconTests,
   IconVocabulario,
@@ -30,6 +31,7 @@ const enlaces = [
     Icono: IconProgreso,
     soloAdmin: true,
   },
+  { href: "/pagos", etiqueta: "Pagos", Icono: IconPagos },
 ];
 
 // Doble tono corto y suave. Si el navegador bloquea el audio (por ejemplo,

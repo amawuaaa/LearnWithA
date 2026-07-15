@@ -34,10 +34,7 @@ function EstadoMensualidad({ estado }) {
 
 function TablaAlumno({ mensualidades }) {
   return (
-    <section className="mt-8">
-      <h2 className="mb-4 text-xl font-semibold text-slate-900">
-        Mis mensualidades
-      </h2>
+    <section className="mt-2">
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
@@ -81,7 +78,7 @@ function TablaAlumno({ mensualidades }) {
 
 function GestionAdmin({ mensualidades, estudiantes, dashboard }) {
   return (
-    <section className="mt-8">
+    <section className="mt-2">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">

@@ -16,16 +16,21 @@ test.describe("Perfil y calendario (alumno)", () => {
     await expect(page.getByRole("heading", { name: "Mi perfil" })).toBeVisible();
     await expect(page.getByText("Cambiar foto")).toBeVisible();
     await expect(page.getByRole("button", { name: "Editar nombre" })).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Mis mensualidades" }),
-    ).toBeVisible();
     await expect(page.getByRole("heading", { name: "Resumen" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Ver todos los pagos" }),
+    ).toBeVisible();
 
     // Edición de nombre: abre y cancela sin guardar.
     await page.getByRole("button", { name: "Editar nombre" }).click();
     await expect(page.getByRole("button", { name: "Guardar" })).toBeVisible();
     await page.getByRole("button", { name: "Cancelar" }).click();
     await expect(page.getByRole("button", { name: "Editar nombre" })).toBeVisible();
+  });
+
+  test("pagos muestra las mensualidades del alumno", async ({ page }) => {
+    await page.goto("/pagos");
+    await expect(page.getByRole("heading", { name: "Pagos" })).toBeVisible();
   });
 
   test("calendario renderiza y abre el detalle del día", async ({ page }) => {

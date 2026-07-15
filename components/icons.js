@@ -87,6 +87,16 @@ export function IconProgreso({ className = "h-5 w-5" }) {
   );
 }
 
+export function IconPagos({ className = "h-5 w-5" }) {
+  return (
+    <svg className={className} {...base}>
+      <rect x="3" y="6" width="18" height="12" rx="2" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <line x1="7" y1="14" x2="11" y2="14" />
+    </svg>
+  );
+}
+
 export function IconPerfil({ className = "h-5 w-5" }) {
   return (
     <svg className={className} {...base}>
